@@ -1,13 +1,19 @@
-"""抓取本人小红书公开笔记 → 本地图片 + data/works.json。
+"""抓取小红书公开笔记 → 本地图片 + data/works.json。
 
-两阶段设计（可断点续跑）：
-  阶段1  元数据：逐条打开笔记详情，每成功一条立刻写 data/raw/notes.json
+支持多账号 + 选择性同步：
+  data/accounts.json     账号表（scripts/xhs_login.py 生成），逐账号抓取
+  data/exclude.json      排除名单：ids / title_keywords（不下载、不导入）
+  data/works.json        某条加 "hidden": true 则站点不显示（图仍在）
+
+两个阶段（可断点续跑）：
+  阶段1  元数据：逐条打开笔记详情，每成功一条立刻落盘
   阶段2  图片：只走 HTTP 下载 + 转码，不再依赖浏览器
 
 用法：
-  python scripts/xhs_fetch.py                # 抓元数据 + 下载图片
-  python scripts/xhs_fetch.py --meta-only    # 只抓元数据
-  python scripts/xhs_fetch.py --images-only  # 只下载图片（复用 notes.json）
+  python scripts/xhs_fetch.py                    # 所有 enabled 账号
+  python scripts/xhs_fetch.py --account photo    # 只抓某个账号
+  python scripts/xhs_fetch.py --meta-only        # 只抓元数据
+  python scripts/xhs_fetch.py --images-only      # 只下载图片
   python scripts/xhs_fetch.py --limit 5
 """
 import json
@@ -19,17 +25,43 @@ import time
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-from xhs_common import DATA, ROOT, launch
+from xhs_common import DATA, ROOT, launch, load_accounts, save_accounts
 
 RAW_DIR = os.path.join(DATA, "raw")
-NOTES_JSON = os.path.join(RAW_DIR, "notes.json")
-ACCOUNT = os.path.join(DATA, "account.json")
+ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
+EXCLUDE_JSON = os.path.join(DATA, "exclude.json")
 WORKS_JSON = os.path.join(ROOT, "data", "works.json")
 IMG_ROOT = os.path.join(ROOT, "images", "works")
 
 FULL_MAX = 1600
 THUMB_W = 720
 TMP_IMG = os.path.join(RAW_DIR, "_tmp.img")
+
+
+def notes_path(account):
+    return os.path.join(RAW_DIR, f"notes_{account}.json")
+
+
+def load_exclude():
+    if not os.path.exists(EXCLUDE_JSON):
+        return {"ids": [], "title_keywords": []}
+    try:
+        with open(EXCLUDE_JSON, encoding="utf-8") as f:
+            d = json.load(f)
+        return {"ids": [str(x) for x in d.get("ids", [])],
+                "title_keywords": [str(x) for x in d.get("title_keywords", [])]}
+    except Exception:
+        return {"ids": [], "title_keywords": []}
+
+
+def excluded(note, ex):
+    if note["id"] in ex["ids"]:
+        return "ID 在排除名单"
+    txt = (note.get("title") or "") + " " + (note.get("desc") or "")
+    for k in ex["title_keywords"]:
+        if k and k in txt:
+            return f"命中关键词「{k}」"
+    return ""
 
 
 # ---------------- 文本工具 ----------------
@@ -106,22 +138,24 @@ def parse_time(ms):
         return ""
 
 
-def load_notes():
-    if not os.path.exists(NOTES_JSON):
+def load_notes(account):
+    p = notes_path(account)
+    if not os.path.exists(p):
         return []
     try:
-        with open(NOTES_JSON, encoding="utf-8") as f:
+        with open(p, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return []
 
 
-def save_notes(notes):
+def save_notes(account, notes):
     os.makedirs(RAW_DIR, exist_ok=True)
-    tmp = NOTES_JSON + ".tmp"
+    p = notes_path(account)
+    tmp = p + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(notes, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, NOTES_JSON)
+    os.replace(tmp, p)
 
 
 # ---------------- 页面脚本 ----------------
@@ -231,13 +265,16 @@ DETAIL_JS = """
 DATE_RE = re.compile(r"(20\d{2})-(\d{2})-(\d{2})")
 
 
-def scrape(page, uid, limit=None, force=False):
+def scrape(page, acc, limit=None, force=False):
+    """抓单个账号。acc = {"key","name","user_id"}"""
+    account, uid, author = acc["key"], acc["user_id"], acc.get("name") or acc["key"]
     url = f"https://www.xiaohongshu.com/user/profile/{uid}"
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_timeout(4000)
     if "login" in page.url:
-        print("!! 未登录，无法访问个人主页", flush=True)
-        return load_notes()
+        print(f"!! [{account}] 未登录，跳过该账号（先跑 xhs_login.py --account {account}）",
+              flush=True)
+        return load_notes(account)
 
     # 边滚边累积：虚拟列表会回收节点，只取最后一屏会漏
     found = {}
@@ -259,11 +296,12 @@ def scrape(page, uid, limit=None, force=False):
 
     items = list(found.values())
     n_priv = sum(1 for x in items if x.get("isPrivate"))
-    print(f"主页共发现 {len(items)} 条笔记（其中疑似私密 {n_priv} 条）", flush=True)
+    print(f"[{account}] 主页共 {len(items)} 条笔记（私密 {n_priv} 条将被排除）", flush=True)
     if limit:
         items = items[:limit]
 
-    notes = [] if force else load_notes()
+    ex = load_exclude()
+    notes = [] if force else load_notes(account)
     done = {n["id"] for n in notes}
     for i, it in enumerate(items):
         if it["id"] in done:
@@ -304,6 +342,8 @@ def scrape(page, uid, limit=None, force=False):
 
         note = {
             "id": it["id"],
+            "account": account,
+            "author": author,
             "title": (d.get("title") or "").strip() or first_line(d.get("desc")) or "无题",
             "desc": clean_desc(d.get("desc")),
             "date": date,
@@ -311,8 +351,14 @@ def scrape(page, uid, limit=None, force=False):
             "tags": d.get("tags") or extract_tags(d.get("desc"), d.get("title")),
             "url": it["href"].split("?")[0],
         }
+
+        why = excluded(note, ex)
+        if why:
+            print(f"跳过（{why}）", flush=True)
+            continue
+
         notes.append(note)
-        save_notes(notes)          # 增量落盘，崩溃不丢进度
+        save_notes(account, notes)     # 增量落盘，崩溃不丢进度
         print(f"{len(imgs)} 图 · {date} · {note['title'][:16]}", flush=True)
 
     return notes
@@ -408,47 +454,93 @@ def build_images(note, slug):
     return result
 
 
-def build_works(notes):
+def load_works():
+    if not os.path.exists(WORKS_JSON):
+        return {}
+    try:
+        with open(WORKS_JSON, encoding="utf-8") as f:
+            d = json.load(f)
+        return {w["id"]: w for w in d.get("works", [])}
+    except Exception:
+        return {}
+
+
+def build_works(accounts):
+    """汇总所有账号的笔记。已存在的作品条目原样保留——
+    这样手工改过的 category / title / hidden 不会被重新抓取覆盖。"""
     cat_names = {"pets": "萌宠", "campus": "校园", "city": "城市",
                  "landscape": "风景", "other": "其他"}
+    old = load_works()
     works = []
-    for i, n in enumerate(notes):
-        title = clean_text(n["title"]) or "无题"
-        caption = clean_text(n["desc"])
-        slug = slugify(title, n["date"], i + 1)
-        print(f"下载 {slug} ...", end=" ", flush=True)
-        imgs = build_images(n, slug)
-        if not imgs:
-            print("无可用图片，跳过", flush=True)
-            continue
-        print(f"{len(imgs)} 张", flush=True)
-        ck = classify(title, caption)
-        works.append({
-            "id": n["id"],
-            "slug": slug,
-            "title": title,
-            "caption": caption,
-            "date": n["date"],
-            "year": n["date"][:4] if n["date"] else "",
-            "tags": n["tags"],
-            "category": ck,
-            "source": n["url"],
-            "thumb": imgs[0]["thumb"],
-            "images": imgs,
-        })
+    seen = set()
+
+    for acc in accounts:
+        for n in load_notes(acc["key"]):
+            if n["id"] in seen:
+                continue
+            seen.add(n["id"])
+
+            if n["id"] in old:
+                works.append(old[n["id"]])     # 保留人工修改
+                print(f"已有 {n['id']}，保留原条目", flush=True)
+                continue
+
+            title = clean_text(n["title"]) or "无题"
+            caption = clean_text(n["desc"])
+            slug = slugify(title, n["date"], len(works) + 1)
+            print(f"下载 {slug} ...", end=" ", flush=True)
+            imgs = build_images(n, slug)
+            if not imgs:
+                print("无可用图片，跳过", flush=True)
+                continue
+            print(f"{len(imgs)} 张", flush=True)
+            works.append({
+                "id": n["id"],
+                "slug": slug,
+                "author": n.get("author", ""),
+                "title": title,
+                "caption": caption,
+                "date": n["date"],
+                "year": n["date"][:4] if n["date"] else "",
+                "tags": n["tags"],
+                "category": classify(title, caption),
+                "source": n["url"],
+                "thumb": imgs[0]["thumb"],
+                "images": imgs,
+                "hidden": False,
+            })
+
+    works.sort(key=lambda w: (w.get("date") or ""), reverse=True)
 
     order = ["pets", "campus", "city", "landscape", "other"]
-    used = {w["category"] for w in works}
+    used = [w["category"] for w in works]
+    cats = [{"key": k, "name": cat_names[k]} for k in order if k in used]
+    for k in used:                      # 允许自定义分类
+        if k and k not in [c["key"] for c in cats]:
+            cats.append({"key": k, "name": k})
+
+    authors = []
+    for w in works:
+        a = w.get("author")
+        if a and a not in authors:
+            authors.append(a)
+
     data = {
-        "site": {"title": "Reeve", "subtitle": "记录光与日常。"},
-        "categories": [{"key": k, "name": cat_names[k]} for k in order if k in used],
+        "site": {
+            "title": "Reeve",
+            "subtitle": "记录光与日常。",
+            "authors": authors,
+        },
+        "categories": cats,
         "works": works,
     }
     tmp = WORKS_JSON + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, WORKS_JSON)
-    print(f"\n站点数据已生成：{WORKS_JSON}（{len(works)} 个作品）", flush=True)
+    visible = sum(1 for w in works if not w.get("hidden"))
+    print(f"\n站点数据已生成：{WORKS_JSON}"
+          f"（{len(works)} 个作品，其中 {visible} 个对外显示）", flush=True)
     return data
 
 
@@ -456,36 +548,49 @@ def build_works(notes):
 
 def main():
     limit = None
+    only_account = None
     for i, a in enumerate(sys.argv):
         if a == "--limit" and i + 1 < len(sys.argv):
             limit = int(sys.argv[i + 1])
+        if a == "--account" and i + 1 < len(sys.argv):
+            only_account = sys.argv[i + 1]
     meta_only = "--meta-only" in sys.argv
     images_only = "--images-only" in sys.argv
     force = "--force" in sys.argv
 
-    if not os.path.exists(ACCOUNT):
-        print("缺少 data/account.json", flush=True)
+    accs = [a for a in load_accounts()["accounts"] if a.get("enabled", True)]
+    if only_account:
+        accs = [a for a in accs if a["key"] == only_account]
+    if not accs:
+        print("没有可用账号。先运行：python scripts/xhs_login.py --account default",
+              flush=True)
         sys.exit(1)
-    with open(ACCOUNT, encoding="utf-8") as f:
-        uid = json.load(f)["user_id"]
 
-    notes = load_notes()
+    ready = []
+    for a in accs:
+        if not a.get("user_id"):
+            print(f"跳过 [{a['key']}]：还没登录过，"
+                  f"先跑 xhs_login.py --account {a['key']}", flush=True)
+            continue
+        ready.append(a)
 
     if not images_only:
-        pw, ctx = launch(headless=True)
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
-        try:
-            notes = scrape(page, uid, limit, force=force)
-            print(f"\n元数据：{len(notes)} 条", flush=True)
-        finally:
+        for acc in ready:
+            print(f"\n===== 账号 {acc['key']}（{acc.get('name')}）=====", flush=True)
+            pw, ctx = launch(headless=True, account=acc["key"])
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
             try:
-                ctx.close()
-                pw.stop()
-            except Exception:
-                pass
+                notes = scrape(page, acc, limit, force=force)
+                print(f"[{acc['key']}] 元数据 {len(notes)} 条", flush=True)
+            finally:
+                try:
+                    ctx.close()
+                    pw.stop()
+                except Exception:
+                    pass
 
     if not meta_only:
-        build_works(notes)
+        build_works(ready)
 
 
 if __name__ == "__main__":

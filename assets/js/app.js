@@ -40,6 +40,7 @@
     site: {},
     works: [],
     categories: [],
+    authors: [],
     filtered: [],
     currentCat: 'all',
     viewing: null,     // 当前作品
@@ -90,7 +91,16 @@
 
   function init(data) {
     state.site = data.site || {};
-    state.works = (data.works || []).slice();
+    // hidden: true 的作品不对外显示（图仍在仓库里，随时可恢复）
+    state.works = (data.works || []).filter(function (w) {
+      return w && !w.hidden;
+    });
+    state.authors = (state.site.authors || []).filter(Boolean);
+    if (!state.authors.length) {
+      state.works.forEach(function (w) {
+        if (w.author && state.authors.indexOf(w.author) < 0) state.authors.push(w.author);
+      });
+    }
 
     // 分类：优先用数据里声明的顺序，其次自动收集
     var declared = data.categories || [];
@@ -309,7 +319,12 @@
     el.viewerTitle.textContent = w.title || '无题';
     el.viewerCaption.textContent = w.caption || '';
     el.viewerCaption.hidden = !w.caption;
-    el.viewerDate.textContent = fmtDate(w.date) + (w.category ? ' · ' + catName(w.category) : '');
+
+    var meta = [];
+    if (state.authors.length > 1 && w.author) meta.push(w.author);
+    if (w.date) meta.push(fmtDate(w.date));
+    if (w.category) meta.push(catName(w.category));
+    el.viewerDate.textContent = meta.join(' · ');
 
     var multi = imgs.length > 1;
     el.viewerCount.textContent = multi ? (state.imgIndex + 1) + ' / ' + imgs.length : '';

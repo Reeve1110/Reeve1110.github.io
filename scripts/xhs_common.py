@@ -1,10 +1,11 @@
-"""小红书抓取公共模块：复用 Edge 登录态（复制 profile 关键文件到独立目录）。
+"""小红书抓取公共模块。
 
-原因：Edge 正在运行时其真实 profile 被锁，Playwright 无法直接接管；
-      且直接驱动用户主 profile 有污染风险。做法是把 Cookies / Local Storage /
-      Local State（含 DPAPI 加密密钥）复制到项目内的独立 profile，同账号 Windows
-      DPAPI 可正常解密，Chromium 启动后即为已登录状态。
+两件事：
+1) 每个小红书账号一个独立浏览器 profile（data/profiles/<key>），登录态互不干扰；
+   Edge 正在运行时其真实 profile 被独占，Playwright 无法接管，只能走扫码登录一次。
+2) 账号表 data/accounts.json 记录 key / 显示名 / user_id，供多账号同步使用。
 """
+import json
 import os
 import shutil
 import sys
@@ -14,7 +15,8 @@ from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
-PROFILE = os.path.join(DATA, "xhs_profile")
+PROFILES_DIR = os.path.join(DATA, "profiles")
+ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
 
 EDGE_USER_DATA = os.path.join(
     os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Edge", "User Data"
@@ -29,51 +31,75 @@ CHROME_ARGS = [
 ]
 
 
-def prepare_profile(force=False):
-    """把 Edge 的登录态文件复制到独立 profile 目录。"""
-    os.makedirs(os.path.join(PROFILE, "Default", "Network"), exist_ok=True)
-    os.makedirs(os.path.join(PROFILE, "Default", "Local Storage", "leveldb"), exist_ok=True)
-    os.makedirs(os.path.join(PROFILE, "Default", "IndexedDB"), exist_ok=True)
-
-    marker = os.path.join(PROFILE, ".copied")
-    if os.path.exists(marker) and not force:
-        return PROFILE
-
-    pairs = [
-        (os.path.join(EDGE_USER_DATA, "Local State"),
-         os.path.join(PROFILE, "Local State")),
-        (os.path.join(SRC_DEFAULT, "Network", "Cookies"),
-         os.path.join(PROFILE, "Default", "Network", "Cookies")),
-        (os.path.join(SRC_DEFAULT, "Preferences"),
-         os.path.join(PROFILE, "Default", "Preferences")),
-    ]
-    # 文件被运行中的 Edge 独占时无法复制，属于正常情况：全新 profile 走扫码登录
-    for src, dst in pairs:
-        if os.path.exists(src):
-            try:
-                shutil.copy2(src, dst)
-            except (PermissionError, OSError) as e:
-                print(f"[profile] 跳过 {os.path.basename(dst)}: {e}")
-
-    for sub in ("Local Storage", "IndexedDB", "Session Storage"):
-        s = os.path.join(SRC_DEFAULT, sub)
-        d = os.path.join(PROFILE, "Default", sub)
-        if os.path.isdir(s):
-            try:
-                shutil.copytree(s, d, dirs_exist_ok=True)
-            except (PermissionError, OSError) as e:
-                print(f"[profile] 跳过 {sub}: {e}")
-
-    with open(marker, "w", encoding="utf-8") as f:
-        f.write(time.strftime("%Y-%m-%d %H:%M:%S"))
-    return PROFILE
+def profile_dir(account="default"):
+    return os.path.join(PROFILES_DIR, account)
 
 
-def launch(headless=False, force_copy=False):
-    prepare_profile(force=force_copy)
+def load_accounts():
+    """账号表；首次运行自动把旧的单账号 account.json 迁移过来。"""
+    if os.path.exists(ACCOUNTS_JSON):
+        try:
+            with open(ACCOUNTS_JSON, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    legacy = os.path.join(DATA, "account.json")
+    accounts = []
+    if os.path.exists(legacy):
+        try:
+            with open(legacy, encoding="utf-8") as f:
+                old = json.load(f)
+            if old.get("user_id"):
+                accounts.append({"key": "default", "name": "Reeve",
+                                 "user_id": old["user_id"], "enabled": True})
+        except Exception:
+            pass
+    data = {"accounts": accounts}
+    save_accounts(data)
+    return data
+
+
+def save_accounts(data):
+    os.makedirs(DATA, exist_ok=True)
+    tmp = ACCOUNTS_JSON + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, ACCOUNTS_JSON)
+
+
+def upsert_account(key, name=None, user_id=None):
+    data = load_accounts()
+    for a in data["accounts"]:
+        if a.get("key") == key:
+            if name:
+                a["name"] = name
+            if user_id:
+                a["user_id"] = user_id
+            save_accounts(data)
+            return a
+    item = {"key": key, "name": name or key, "user_id": user_id or "", "enabled": True}
+    data["accounts"].append(item)
+    save_accounts(data)
+    return item
+
+
+def prepare_profile(account="default", force=False):
+    """初始化账号 profile 目录（不复制 Edge 的登录态，Edge 常驻会独占文件）。"""
+    prof = profile_dir(account)
+    os.makedirs(os.path.join(prof, "Default", "Network"), exist_ok=True)
+    marker = os.path.join(prof, ".created")
+    if not os.path.exists(marker):
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S"))
+    return prof
+
+
+def launch(headless=False, force_copy=False, account="default"):
+    prof = prepare_profile(account, force=force_copy)
     pw = sync_playwright().start()
     ctx = pw.chromium.launch_persistent_context(
-        PROFILE,
+        prof,
         channel="msedge",
         headless=headless,
         args=CHROME_ARGS,

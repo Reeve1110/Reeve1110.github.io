@@ -17,8 +17,9 @@
 │   └── js/app.js           渲染逻辑：网格 / 分类 / 详情
 ├── data/
 │   └── works.json          ★ 作品数据，唯一需要维护的文件
-└── images/
-    └── works/<作品目录>/    作品图片
+├── images/
+│   └── works/<作品目录>/    作品图片
+└── scripts/                小红书导入与自测脚本（不参与页面运行）
 ```
 
 ## 新增一组作品
@@ -68,6 +69,8 @@
 | `category` | 是 | 分类 key，需与 `categories` 中某项对应 |
 | `thumb` | 是 | 列表封面（取第一张的 `_t` 缩略图即可） |
 | `images` | 是 | 图片数组，`w`/`h` 为像素尺寸（用于瀑布流排版，必填） |
+| `hidden` | 否 | `true` 时不在站点显示（图片仍保留），默认 `false` |
+| `author` | 否 | 作者/账号名，多账号时在详情页显示 |
 | `tags` / `source` / `slug` | 否 | 备注、原文链接、目录名 |
 
 **分类**：在 `categories` 里登记，`key` 供数据引用，`name` 是显示名：
@@ -114,3 +117,71 @@ git push
 
 初始作品由本人小红书公开笔记导入（`scripts/xhs_fetch.py`），
 图片版权归作者所有。
+
+## 从小红书导入（可选）
+
+脚本用独立浏览器 profile 保存登录态，**只抓公开笔记**：私密（仅自己可见）与视频自动跳过。
+
+```bash
+python scripts/xhs_login.py                 # 登录默认账号（扫码一次）
+python scripts/xhs_fetch.py                 # 抓取 + 下载图片 + 生成 works.json
+```
+
+- 已有作品按笔记 ID 跳过，可反复运行做增量同步
+- **手工改过的条目不会被覆盖**：`title` / `category` / `hidden` 都以 `works.json` 里现值为准
+- `data/accounts.json`、`data/profiles/`、`data/exclude.json` 都在 `.gitignore` 内，不会进仓库
+
+### 两个（或多个）账号
+
+每个账号有独立登录态，互不干扰：
+
+```bash
+python scripts/xhs_login.py --account photo --name "小号"   # 第二个账号登录一次
+python scripts/xhs_fetch.py                                # 之后默认同步所有 enabled 账号
+python scripts/xhs_fetch.py --account photo                # 只同步某一个
+```
+
+账号表 `data/accounts.json`：
+
+```json
+{ "accounts": [
+  { "key": "default", "name": "Reeve", "user_id": "625fb...", "enabled": true },
+  { "key": "photo",   "name": "小号",   "user_id": "69xxx...", "enabled": true }
+]}
+```
+
+把 `enabled` 改 `false` 即可整体停用某个账号。两个账号的作品会混排在同一条时间线上，
+作品详情页的作者名只在存在多个账号时显示。
+
+### 某些笔记不想同步
+
+两层机制，按需求选：
+
+**① 永久排除（不下载、不进数据）** — 编辑 `data/exclude.json`：
+
+```json
+{
+  "ids": ["68a2fa63000000001c007770"],
+  "title_keywords": ["领养", "宿舍", "考试"]
+}
+```
+
+`ids` 是笔记链接里 `/explore/<这一串>`；`title_keywords` 命中标题或正文就排除。
+改完重跑 `xhs_fetch.py`。已经导入过的，还要从 `works.json` 里删掉那一条。
+
+**② 临时隐藏（图还在，只是不显示）** — 在 `data/works.json` 对应作品里加一行：
+
+```json
+{ "id": "...", "title": "...", "hidden": true }
+```
+
+改完刷新页面即可，随时改回 `false` 恢复。
+
+**③ 彻底不要** — 直接删掉 `works.json` 里的条目和 `images/works/<目录>/`。
+
+## 自测
+
+```bash
+python -m http.server 8765          # 另开一个终端
+python scripts/test_site.py         # 桌面 / 手机 / 平板三档逐项校验，截图存 data/shots/
+```

@@ -16,3 +16,6 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.log
+
+# 覆盖旧站前留的本地备份
+.backup-origin-main/

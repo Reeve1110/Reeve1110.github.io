@@ -1,7 +1,10 @@
 {
   "site": {
     "title": "Reeve",
-    "subtitle": "记录光与日常。"
+    "subtitle": "记录光与日常。",
+    "authors": [
+      "Reeve"
+    ]
   },
   "categories": [
     {
@@ -59,7 +62,9 @@
           "w": 1080,
           "h": 1440
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "69520b78000000001f00f79f",
@@ -146,7 +151,9 @@
           "w": 1600,
           "h": 901
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "69425426000000001f007da2",
@@ -196,7 +203,9 @@
           "w": 1600,
           "h": 901
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "69085c7c0000000005038a30",
@@ -270,7 +279,9 @@
           "w": 1600,
           "h": 1000
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "688e245e0000000023023a3c",
@@ -307,7 +318,9 @@
           "w": 1600,
           "h": 900
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "688e1e21000000002302f773",
@@ -331,7 +344,9 @@
           "w": 1440,
           "h": 1080
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "685b79db000000002201cc21",
@@ -355,7 +370,9 @@
           "w": 1440,
           "h": 1080
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     },
     {
       "id": "685279f8000000001c0309c2",
@@ -379,7 +396,9 @@
           "w": 1600,
           "h": 900
         }
-      ]
+      ],
+      "author": "Reeve",
+      "hidden": false
     }
   ]
 }
