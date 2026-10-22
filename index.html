@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reeve — 摄影</title>
+<meta name="description" content="Reeve 的摄影作品集。">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+
+<a class="skip" href="#gallery">跳到作品</a>
+
+<header class="site-header" id="siteHeader">
+  <div class="header-inner">
+    <a class="brand" href="#/" aria-label="回到首页">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">Reeve</span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="分类">
+      <a class="nav-link" href="#/" data-nav="all">全部</a>
+      <!-- 分类由 data/works.json 自动生成 -->
+    </nav>
+
+    <div class="header-tools">
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="切换深浅色">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path class="ico-sun" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <circle class="ico-sun" cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6" fill="none"/>
+          <path class="ico-moon" d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="更多分类" aria-expanded="false" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="header-progress" id="headerProgress" aria-hidden="true"></div>
+</header>
+
+<main id="main">
+  <section class="intro" id="intro">
+    <h1 class="intro-title">摄影作品</h1>
+    <p class="intro-sub" id="introSub">记录光与日常。</p>
+    <p class="intro-meta" id="introMeta"></p>
+  </section>
+
+  <section id="galleryWrap">
+    <h2 class="section-title" id="sectionTitle" hidden></h2>
+    <div class="gallery" id="gallery" aria-live="polite"></div>
+    <p class="empty" id="empty" hidden>这个分类下还没有作品。</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p>© <span id="year"></span> Reeve</p>
+    <p class="footer-note">图片版权归作者所有，转载请先联系。</p>
+  </div>
+</footer>
+
+<!-- 详情视图 -->
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="作品详情">
+  <div class="viewer-bar">
+    <button class="icon-btn viewer-close" id="viewerClose" type="button" aria-label="关闭">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <span class="viewer-count" id="viewerCount"></span>
+  </div>
+
+  <button class="viewer-nav prev" id="viewerPrev" type="button" aria-label="上一张">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  </button>
+  <button class="viewer-nav next" id="viewerNext" type="button" aria-label="下一张">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  </button>
+
+  <div class="viewer-stage" id="viewerStage">
+    <img id="viewerImg" alt="">
+  </div>
+
+  <div class="viewer-info" id="viewerInfo">
+    <h3 class="viewer-title" id="viewerTitle"></h3>
+    <p class="viewer-caption" id="viewerCaption"></p>
+    <p class="viewer-date" id="viewerDate"></p>
+  </div>
+</div>
+
+<script src="assets/js/app.js"></script>
+</body>
+</html>
