@@ -232,12 +232,13 @@ python scripts/make_brand_assets.py --preview
 ```bash
 python -m http.server 8765          # 另开一个终端
 python scripts/test_site.py         # 页面三档视口 + 首屏 + 敏感信息断言，截图存 data/shots/
-python scripts/test_site.py --url https://reeve1110.github.io/
+python scripts/test_site.py --url https://<你的域名>/    # 同一套断言跑线上
 python scripts/test_gui.py --shot   # 管理工具控件与布局
 ```
 
 ## 隐私约定
 
-- `data/` 下除 `works.json`、`profile.json` 外**一律不进仓库**：账号 ID、登录态、AI key 都只在本地
+- `data/` 下除 `works.json`、`profile.json`、`ai.example.json`（空模板）外**一律不进仓库**：
+  账号 ID、登录态、AI key 都只在本地
 - 页面上不渲染任何账号 ID / 手机号 / 邮箱；二维码素材在生成时就裁掉了这些文字
 - `profile.json` 的字段是白名单，多余字段会被门禁拦下
