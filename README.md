@@ -3,6 +3,21 @@
 个人摄影作品展示站，纯静态，托管于 GitHub Pages。
 线上地址：<https://reeve1110.github.io/>
 
+## 日常维护：双击 `管理工具.bat`
+
+一个桌面小工具，管三件事：
+
+| 标签页 | 能做什么 |
+|---|---|
+| **作品同步** | 列表里勾选哪些文章对外显示（☑ 显示 / ☐ 隐藏），右侧实时预览缩略图；「抓取新笔记」一键同步小红书；「保存修改」「推送更新」直接 commit + push |
+| **账号管理** | 添加账号（自动弹浏览器扫码）、登录 / 重新登录、启用停用、移除 |
+
+勾选后点「保存修改」写入 `data/works.json`，再点「推送更新」，GitHub Pages 约 1 分钟后生效。
+所有命令输出都打在窗口下方的日志里。
+
+> 需要 Python 3.13+（带 tkinter）与 Pillow。脚本里默认用 `D:\tool\Python\Python314`，
+> 换机器时改一下 `管理工具.bat` 里的 `PY` 路径即可。
+
 ## 技术形态
 
 - 纯 HTML / CSS / JavaScript，无构建步骤、无后端、无第三方依赖
@@ -12,6 +27,7 @@
 ```
 .
 ├── index.html              页面结构（一般不用改）
+├── 管理工具.bat            双击启动桌面管理工具
 ├── assets/
 │   ├── css/style.css       样式
 │   └── js/app.js           渲染逻辑：网格 / 分类 / 详情
@@ -19,7 +35,7 @@
 │   └── works.json          ★ 作品数据，唯一需要维护的文件
 ├── images/
 │   └── works/<作品目录>/    作品图片
-└── scripts/                小红书导入与自测脚本（不参与页面运行）
+└── scripts/                管理工具 + 小红书导入 + 自测脚本（不参与页面运行）
 ```
 
 ## 新增一组作品
@@ -183,5 +199,7 @@ python scripts/xhs_fetch.py --account photo                # 只同步某一个
 
 ```bash
 python -m http.server 8765          # 另开一个终端
-python scripts/test_site.py         # 桌面 / 手机 / 平板三档逐项校验，截图存 data/shots/
+python scripts/test_site.py         # 页面：桌面 / 手机 / 平板三档，截图存 data/shots/
+python scripts/test_site.py --url https://reeve1110.github.io/   # 直接测线上
+python scripts/test_gui.py --shot   # 管理工具：控件、勾选、布局、截图
 ```
