@@ -28,6 +28,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 WORKS_JSON = os.path.join(DATA, "works.json")
 ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
+PROFILE_JSON = os.path.join(DATA, "profile.json")
 PROFILES = os.path.join(DATA, "profiles")
 SITE_URL = "https://reeve1110.github.io/"
 
@@ -80,6 +81,7 @@ class App(tk.Tk):
 
         self.works_data = load_json(WORKS_JSON, {"site": {}, "categories": [], "works": []})
         self.accounts_data = load_json(ACCOUNTS_JSON, {"accounts": []})
+        self.profile_data = load_json(PROFILE_JSON, {})
         self.dirty = False
         self.busy = False
         self.q = queue.Queue()
@@ -89,6 +91,7 @@ class App(tk.Tk):
         self._style()
         self._build()
         self.reload_works()
+        self.reload_profile()
         self.reload_accounts()
         self.refresh_status()
         self.after(120, self._drain_queue)
@@ -172,11 +175,14 @@ class App(tk.Tk):
         self.nb.pack(fill="both", expand=True, padx=14, pady=(4, 4))
         self.tab_works = ttk.Frame(self.nb, padding=10)
         self.tab_acc = ttk.Frame(self.nb, padding=10)
+        self.tab_me = ttk.Frame(self.nb, padding=10)
         self.nb.add(self.tab_works, text="作品同步")
+        self.nb.add(self.tab_me, text="个人信息")
         self.nb.add(self.tab_acc, text="账号管理")
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab)
 
         self._build_works(self.tab_works)
+        self._build_profile(self.tab_me)
         self._build_accounts(self.tab_acc)
 
     def _build_works(self, parent):
@@ -244,6 +250,124 @@ class App(tk.Tk):
         self.pv.pack(fill="both", expand=True)
         self.pv_title = ttk.Label(right, text="", wraplength=216, style="Soft.TLabel")
         self.pv_title.pack(fill="x", pady=(6, 0))
+
+    # ---------------- 个人信息 ----------------
+
+    def _build_profile(self, parent):
+        foot = ttk.Frame(parent)
+        foot.pack(fill="x", side="bottom", pady=(12, 0))
+        ttk.Button(foot, text="保存", style="Accent.TButton",
+                   command=self.save_profile).pack(side="left")
+        ttk.Button(foot, text="从小红书同步简介",
+                   command=self.sync_bio).pack(side="left", padx=(8, 0))
+        ttk.Label(foot, text="改完点保存；推送在「作品同步」页",
+                  style="Soft.TLabel").pack(side="right")
+
+        box = ttk.Frame(parent)
+        box.pack(fill="both", expand=True)
+
+        ttk.Label(box, text="名字", style="Soft.TLabel").grid(
+            row=0, column=0, sticky="w", pady=(0, 4))
+        self.var_name = tk.StringVar()
+        ttk.Entry(box, textvariable=self.var_name, width=30).grid(
+            row=1, column=0, sticky="w")
+        ttk.Label(box, text="名字会显示在首屏大标题和左上角", style="Soft.TLabel").grid(
+            row=1, column=1, sticky="w", padx=(12, 0))
+
+        ttk.Label(box, text="小标题", style="Soft.TLabel").grid(
+            row=2, column=0, sticky="w", pady=(14, 4))
+        self.var_role = tk.StringVar()
+        ttk.Entry(box, textvariable=self.var_role, width=30).grid(
+            row=3, column=0, sticky="w")
+        ttk.Label(box, text="例如 Photography · 摄影", style="Soft.TLabel").grid(
+            row=3, column=1, sticky="w", padx=(12, 0))
+
+        ttk.Label(box, text="个性签名", style="Soft.TLabel").grid(
+            row=4, column=0, sticky="w", pady=(14, 4))
+        wrapy = ttk.Frame(box)
+        wrapy.grid(row=5, column=0, columnspan=2, sticky="w")
+        self.txt_bio = tk.Text(wrapy, width=46, height=4, wrap="word",
+                               bg="#faf9f7", fg="#33302c", relief="flat",
+                               font=("Microsoft YaHei UI", 10), padx=10, pady=8)
+        self.txt_bio.pack(side="left")
+        ttk.Scrollbar(wrapy, command=self.txt_bio.yview).pack(side="left", fill="y")
+
+        src = ttk.Frame(box)
+        src.grid(row=6, column=0, columnspan=2, sticky="w", pady=(12, 0))
+        ttk.Label(src, text="签名来源", style="Soft.TLabel").pack(side="left")
+        self.var_src = tk.StringVar(value="custom")
+        ttk.Radiobutton(src, text="自定义（手动编辑上面这段）", value="custom",
+                        variable=self.var_src).pack(side="left", padx=(12, 0))
+        ttk.Radiobutton(src, text="同步小红书（每次同步用账号简介覆盖）",
+                        value="xiaohongshu", variable=self.var_src).pack(
+            side="left", padx=(12, 0))
+
+        tip = ttk.Label(
+            box,
+            text="提示：换行会被保留，首屏按原样分行显示；"
+                 "选「同步小红书」后每次抓取/同步都会用小红书上的简介替换这里的内容。",
+            style="Soft.TLabel", wraplength=720, justify="left")
+        tip.grid(row=7, column=0, columnspan=2, sticky="w", pady=(14, 0))
+
+        ttk.Label(box, text="头像与二维码", style="Soft.TLabel").grid(
+            row=8, column=0, sticky="w", pady=(18, 4))
+        self.lbl_assets = ttk.Label(box, text="", style="Soft.TLabel",
+                                    wraplength=720, justify="left")
+        self.lbl_assets.grid(row=9, column=0, columnspan=2, sticky="w")
+
+    def reload_profile(self):
+        p = self.profile_data or {}
+        self.var_name.set(p.get("name", ""))
+        self.var_role.set(p.get("role", ""))
+        self.var_src.set(p.get("bio_source", "custom"))
+        self.txt_bio.delete("1.0", "end")
+        self.txt_bio.insert("1.0", p.get("bio", ""))
+        links = "、".join(l.get("label", "") for l in p.get("links", []))
+        self.lbl_assets.configure(
+            text=f"头像：{p.get('avatar', '（未设置）')}    二维码：{links or '（未设置）'}\n"
+                 f"图片在 assets/img/，换图直接覆盖同名文件即可")
+
+    def save_profile(self):
+        bio = self.txt_bio.get("1.0", "end").rstrip()
+        data = dict(self.profile_data or {})
+        data["name"] = self.var_name.get().strip() or "Reeve"
+        data["role"] = self.var_role.get().strip()
+        data["bio"] = bio
+        data["bio_source"] = self.var_src.get()
+        try:
+            save_json(PROFILE_JSON, data)
+            self.profile_data = data
+            self.log("✓ profile.json 已保存（记得去「作品同步」页推送）", "ok")
+        except Exception as e:
+            messagebox.showerror("保存失败", str(e))
+
+    def sync_bio(self):
+        accs = [a for a in self.accounts_data.get("accounts", [])
+                if a.get("enabled", True) and a.get("user_id")]
+        if not accs:
+            messagebox.showwarning("没有可用账号",
+                                   "先去「账号管理」添加并登录账号。")
+            return
+        if self.var_src.get() != "xiaohongshu":
+            if not messagebox.askyesno(
+                    "改用小红书简介？",
+                    "当前签名来源是「自定义」，同步会被跳过。\n"
+                    "要改成「同步小红书」并立即拉取吗？"):
+                return
+            self.var_src.set("xiaohongshu")
+            self.save_profile()
+
+        script = os.path.join(ROOT, "scripts", "sync_profile.py")
+        self.set_busy("同步简介…")
+        self.log(f"→ 读取 {accs[0]['name']} 的小红书简介", "warn")
+        self.run_cmd([python_exe(), script, "--account", accs[0]["key"]],
+                     "同步简介", on_done=self._after_sync_bio)
+
+    def _after_sync_bio(self, ok):
+        self.profile_data = load_json(PROFILE_JSON, {})
+        self.reload_profile()
+        if ok:
+            self.log("✓ 签名已更新", "ok")
 
     def _build_accounts(self, parent):
         tip = ttk.Label(

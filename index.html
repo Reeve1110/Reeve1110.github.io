@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reeve — 摄影</title>
-<meta name="description" content="Reeve 的摄影作品集。">
-<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Reeve 的摄影作品集。记录光与日常。">
+<meta name="theme-color" content="#0d0c0b">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="index, follow">
+<link rel="preload" href="assets/fonts/shs-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://images.unsplash.com">
 <link rel="stylesheet" href="assets/css/style.css">
 <script>
   (function () {
@@ -21,7 +23,7 @@
 </head>
 <body>
 
-<a class="skip" href="#gallery">跳到作品</a>
+<a class="skip" href="#galleryWrap">跳到作品</a>
 
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
@@ -54,17 +56,50 @@
 </header>
 
 <main id="main">
-  <section class="intro" id="intro">
-    <h1 class="intro-title">摄影作品</h1>
-    <p class="intro-sub" id="introSub">记录光与日常。</p>
-    <p class="intro-meta" id="introMeta"></p>
+
+  <!-- ================= 首屏：最新作品封面 + 身份 + 二维码 ================= -->
+  <section class="hero" id="hero" aria-labelledby="heroName">
+    <div class="hero-media">
+      <img class="hero-img" id="heroImg" alt="" decoding="async" fetchpriority="high">
+    </div>
+    <div class="hero-veil" aria-hidden="true"></div>
+
+    <div class="hero-inner">
+      <div class="hero-lead">
+        <img class="hero-avatar" id="heroAvatar" alt="Reeve 的头像" width="88" height="88" hidden>
+
+        <p class="hero-eyebrow" id="heroEyebrow">Photography</p>
+        <h1 class="hero-name" id="heroName">Reeve</h1>
+        <p class="hero-bio" id="heroBio"></p>
+        <p class="hero-meta" id="heroMeta"></p>
+
+        <div class="hero-actions">
+          <a class="hero-cta" href="#galleryWrap">
+            浏览作品
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <button class="hero-latest" id="heroLatest" type="button" hidden></button>
+        </div>
+      </div>
+
+      <aside class="hero-connect" id="heroConnect" hidden aria-label="社交媒体二维码">
+        <p class="connect-title">扫码找到我</p>
+        <div class="qr-row" id="qrRow"></div>
+        <p class="connect-note">手机相机或对应 App 扫一扫</p>
+      </aside>
+    </div>
   </section>
 
-  <section id="galleryWrap">
-    <h2 class="section-title" id="sectionTitle" hidden></h2>
-    <div class="gallery" id="gallery" aria-live="polite"></div>
+  <!-- ================= 作品网格 ================= -->
+  <section id="galleryWrap" class="gallery-wrap">
+    <div class="gallery-head">
+      <h2 class="section-title" id="sectionTitle">全部作品</h2>
+      <p class="gallery-count" id="galleryCount"></p>
+    </div>
+    <div class="gallery" id="gallery"></div>
     <p class="empty" id="empty" hidden>这个分类下还没有作品。</p>
   </section>
+
 </main>
 
 <footer class="site-footer">

@@ -1,0 +1,19 @@
+{
+  "name": "Reeve",
+  "role": "Photography · 摄影",
+  "bio": "记录光与日常。\n泉州的街头、校园角落，和那些恰好抬头的人。",
+  "bio_source": "custom",
+  "avatar": "assets/img/avatar.png",
+  "links": [
+    {
+      "key": "xiaohongshu",
+      "label": "小红书",
+      "qr": "assets/img/qr-xiaohongshu.png"
+    },
+    {
+      "key": "douyin",
+      "label": "抖音",
+      "qr": "assets/img/qr-douyin.png"
+    }
+  ]
+}

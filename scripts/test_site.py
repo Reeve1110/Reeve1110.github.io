@@ -21,6 +21,91 @@ def check(name, ok, detail=""):
     print(("PASS  " if ok else "FAIL  ") + name + (f"   [{detail}]" if detail else ""), flush=True)
 
 
+def hero_checks(page, label):
+    """首屏：满屏背景、身份信息、二维码、层级切换、敏感信息不落 DOM。"""
+    box = page.evaluate(
+        """() => {
+        const r = document.getElementById('hero').getBoundingClientRect();
+        return {w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight};
+    }""")
+    check(f"{label} 首屏占满视口",
+          abs(box["h"] - box["vh"]) <= 2 and box["w"] >= box["vw"] - 1,
+          f"hero {box['w']}x{box['h']} / vp {box['vw']}x{box['vh']}")
+
+    bg = page.evaluate(
+        """() => {
+        const i = document.getElementById('heroImg');
+        const w0 = (window.__site.works[0] || {});
+        const im = (w0.images || [])[0] || {};
+        return {nw: i.naturalWidth, src: i.getAttribute('src') || '',
+                cover: getComputedStyle(i).objectFit, latest: im.src || ''};
+    }""")
+    check(f"{label} 背景是最新作品封面", bg["nw"] > 0 and bg["src"] == bg["latest"],
+          (bg["src"] or "")[-46:])
+    check(f"{label} 背景铺满不变形", bg["cover"] == "cover", bg["cover"])
+
+    name = page.locator("#heroName").inner_text().strip()
+    bio = page.locator("#heroBio").inner_text().strip()
+    check(f"{label} 展示名字", name != "", name)
+    check(f"{label} 展示个性签名", bio != "", bio[:26])
+    av = page.evaluate(
+        "() => { const a = document.getElementById('heroAvatar');"
+        " return a.hidden ? 0 : a.naturalWidth; }")
+    check(f"{label} 头像已加载", av > 0, f"{av}px")
+
+    qr = page.evaluate(
+        """() => [...document.querySelectorAll('.qr-tile')].map(t => {
+        const i = t.querySelector('img');
+        const r = t.getBoundingClientRect();
+        const f = t.querySelector('.qr-frame').getBoundingClientRect();
+        return {key: t.dataset.key || '', nw: i.naturalWidth, w: Math.round(f.width),
+                bottom: Math.round(r.bottom), vh: innerHeight};
+    })""")
+    check(f"{label} 两个二维码都在", len(qr) == 2, str([q["key"] for q in qr]))
+    check(f"{label} 二维码素材有效", all(q["nw"] >= 300 for q in qr), str([q["nw"] for q in qr]))
+    check(f"{label} 二维码在首屏内", all(q["bottom"] <= q["vh"] + 1 for q in qr),
+          str([q["bottom"] for q in qr]))
+    check(f"{label} 二维码尺寸可扫描", all(q["w"] >= 80 for q in qr), str([q["w"] for q in qr]))
+
+    check(f"{label} 首屏内头部透明",
+          page.evaluate("() => document.getElementById('siteHeader')"
+                        ".classList.contains('is-over-hero')"))
+    # 滚过首屏：头部必须切回实底（页面不够长时按几何规则判定）
+    page.evaluate("() => window.scrollTo(0, document.getElementById('hero').offsetHeight + 200)")
+    page.wait_for_timeout(450)
+    st = page.evaluate(
+        """() => {
+        const el = document.getElementById('siteHeader');
+        return {y: Math.round(window.scrollY),
+                heroH: document.getElementById('hero').offsetHeight,
+                over: el.classList.contains('is-over-hero'),
+                bg: getComputedStyle(el).backgroundColor};
+    }""")
+    past = st["y"] >= st["heroH"] - 44
+    solid_bg = st["bg"] not in ("rgba(0, 0, 0, 0)", "transparent")
+    check(f"{label} 头部随首屏切换（几何一致）", (not st["over"]) == past and solid_bg == past,
+          f"y={st['y']} hero={st['heroH']} bg={st['bg']}")
+    page.evaluate("() => window.scrollTo(0, 0)")
+    page.wait_for_timeout(350)
+
+    leak = page.evaluate(
+        """() => {
+        const txt = document.body.innerText || '';
+        const attrs = [...document.querySelectorAll('[src],[href]')];
+        return {
+            phone: /(?<![0-9A-Za-z])1[3-9]\\d{9}(?![0-9A-Za-z])/.test(txt),
+            longnum: /(?<![0-9A-Za-z])\\d{11,}(?![0-9A-Za-z])/.test(txt),
+            mail: /[\\w.+-]+@[\\w-]+\\.[\\w.]+/.test(txt),
+            danger: attrs.some(e => /^\\s*javascript:/i.test(
+                e.getAttribute('src') || e.getAttribute('href') || '')),
+        };
+    }""")
+    check(f"{label} 页面无手机号/长串数字",
+          not leak["phone"] and not leak["longnum"], str(leak))
+    check(f"{label} 无邮箱无危险链接",
+          not leak["mail"] and not leak["danger"], str(leak))
+
+
 def run(pw, label, viewport, mobile=False, shots_prefix=""):
     print(f"\n===== {label} ({viewport['width']}x{viewport['height']}) =====", flush=True)
     browser = pw.chromium.launch(channel="msedge", headless=True)
@@ -47,6 +132,9 @@ def run(pw, label, viewport, mobile=False, shots_prefix=""):
     # 2. 标题 / 结构
     check(f"{label} 站点标题", page.title() != "" and "Reeve" in page.title(), page.title())
     check(f"{label} 头部存在", page.locator("#siteHeader").is_visible())
+
+    # 2b. 首屏
+    hero_checks(page, label)
 
     # 3. 图片是否真的解码成功（自然宽高 > 0）
     bad = page.evaluate(

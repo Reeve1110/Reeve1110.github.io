@@ -9,20 +9,29 @@
   'use strict';
 
   var DATA_URL = 'data/works.json';
+  var PROFILE_URL = 'data/profile.json';
 
   var el = {
     gallery: document.getElementById('gallery'),
     empty: document.getElementById('empty'),
-    intro: document.getElementById('intro'),
-    introSub: document.getElementById('introSub'),
-    introMeta: document.getElementById('introMeta'),
     sectionTitle: document.getElementById('sectionTitle'),
+    galleryCount: document.getElementById('galleryCount'),
     nav: document.getElementById('nav'),
     menuBtn: document.getElementById('menuBtn'),
     themeBtn: document.getElementById('themeBtn'),
     header: document.getElementById('siteHeader'),
     progress: document.getElementById('headerProgress'),
     year: document.getElementById('year'),
+    hero: document.getElementById('hero'),
+    heroImg: document.getElementById('heroImg'),
+    heroAvatar: document.getElementById('heroAvatar'),
+    heroEyebrow: document.getElementById('heroEyebrow'),
+    heroName: document.getElementById('heroName'),
+    heroBio: document.getElementById('heroBio'),
+    heroMeta: document.getElementById('heroMeta'),
+    heroLatest: document.getElementById('heroLatest'),
+    heroConnect: document.getElementById('heroConnect'),
+    qrRow: document.getElementById('qrRow'),
     viewer: document.getElementById('viewer'),
     viewerStage: document.getElementById('viewerStage'),
     viewerImg: document.getElementById('viewerImg'),
@@ -38,6 +47,7 @@
 
   var state = {
     site: {},
+    profile: {},
     works: [],
     categories: [],
     authors: [],
@@ -73,24 +83,29 @@
 
   /* ---------------- 数据加载 ---------------- */
 
+  function getJSON(url) {
+    return fetch(url, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
   function load() {
-    return fetch(DATA_URL, { cache: 'no-cache' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(init)
+    // profile.json 只放展示信息，缺失时整块二维码/头像区自动隐藏
+    var profile = getJSON(PROFILE_URL).catch(function () { return {}; });
+    return Promise.all([getJSON(DATA_URL), profile])
+      .then(function (res) { init(res[0], res[1] || {}); })
       .catch(function (e) {
         console.error('[site] 作品数据加载失败：', e);
         el.gallery.innerHTML =
-          '<p class="empty">作品数据加载失败（' + e.message + '）。<br>' +
-          '请检查 data/works.json 是否存在且格式正确。</p>';
+          '<p class="empty">作品数据加载失败（' + esc(e.message) + '）。</p>';
         el.gallery.style.display = 'block';
       });
   }
 
-  function init(data) {
+  function init(data, profile) {
     state.site = data.site || {};
+    state.profile = profile || {};
     // hidden: true 的作品不对外显示（图仍在仓库里，随时可恢复）
     state.works = (data.works || []).filter(function (w) {
       return w && !w.hidden;
@@ -122,13 +137,100 @@
       return String(b.date || '').localeCompare(String(a.date || ''));
     });
 
-    if (state.site.subtitle) el.introSub.textContent = state.site.subtitle;
-    el.introMeta.textContent =
-      state.works.length + ' WORKS · ' + state.categories.length + ' SERIES';
-
     state.ready = true;
+    renderHero();
     buildNav();
     render();
+  }
+
+  /* ---------------- 首屏 ---------------- */
+
+  // 只允许引用站内相对路径，避免 profile.json 被塞进外部/危险地址
+  function safeRef(p) {
+    return (typeof p === 'string' && /^(assets|images)\//.test(p)) ? p : '';
+  }
+
+  function latestWork() {
+    for (var i = 0; i < state.works.length; i++) {
+      var im = state.works[i].images && state.works[i].images[0];
+      if (im && (im.src || im.thumb)) return state.works[i];
+    }
+    return null;
+  }
+
+  function renderHero() {
+    var p = state.profile || {};
+    var latest = latestWork();
+
+    // 背景：最新一组作品的封面原图
+    if (latest) {
+      var im = latest.images[0];
+      el.heroImg.alt = '';
+      el.heroImg.addEventListener('load', function () {
+        el.heroImg.classList.add('is-ready');
+      });
+      el.heroImg.src = im.src || im.thumb;
+      if (el.heroImg.complete && el.heroImg.naturalWidth) {
+        el.heroImg.classList.add('is-ready');
+      }
+    }
+
+    var name = p.name || state.site.title || 'Reeve';
+    el.heroName.textContent = name;
+    el.heroEyebrow.textContent = p.role || 'Photography';
+    el.heroBio.textContent = p.bio || state.site.subtitle || '';
+    el.heroBio.hidden = !el.heroBio.textContent;
+
+    // 统计：组数 / 系列 / 年份跨度
+    var years = [];
+    state.works.forEach(function (w) {
+      var y = w.year || (w.date || '').slice(0, 4);
+      if (y && years.indexOf(y) < 0) years.push(y);
+    });
+    years.sort();
+    var meta = [state.works.length + ' 组作品', state.categories.length + ' 个系列'];
+    if (years.length) {
+      meta.push(years[0] + (years.length > 1 ? '—' + years[years.length - 1] : ''));
+    }
+    el.heroMeta.textContent = meta.join(' · ');
+
+    if (latest) {
+      el.heroLatest.hidden = false;
+      el.heroLatest.textContent = '最新 · ' + (latest.title || '无题') +
+        (latest.date ? ' · ' + fmtDate(latest.date) : '');
+      el.heroLatest.addEventListener('click', function () {
+        location.hash = '#/work/' + encodeURIComponent(latest.id);
+      });
+    }
+
+    var avatar = safeRef(p.avatar);
+    if (avatar) {
+      el.heroAvatar.src = avatar;
+      el.heroAvatar.alt = name + ' 的头像';
+      el.heroAvatar.hidden = false;
+    }
+
+    renderConnect(p);
+    if (latest) document.title = name + ' — 摄影';
+  }
+
+  function renderConnect(p) {
+    var links = Array.isArray(p.links) ? p.links : [];
+    var html = '';
+    links.forEach(function (l) {
+      var qr = l && safeRef(l.qr);
+      if (!qr) return;                    // 路径不合法直接跳过
+      var key = String(l.key || '').replace(/[^a-z0-9-]/gi, '');
+      var label = String(l.label || '').slice(0, 12);
+      html += '<div class="qr-tile"' + (key ? ' data-key="' + key + '"' : '') + '>' +
+        '<span class="qr-frame"><img src="' + esc(qr) + '" alt="' + esc(label) +
+        '二维码" width="128" height="128" loading="eager" decoding="async"></span>' +
+        '<span class="qr-label">' + esc(label) + '</span>' +
+        '</div>';
+    });
+    if (!html) return;
+    el.qrRow.innerHTML = html;
+    el.heroConnect.hidden = false;
   }
 
   /* ---------------- 导航 ---------------- */
@@ -175,14 +277,12 @@
     markNav();
 
     if (state.currentCat === 'all') {
-      el.intro.hidden = false;
-      el.sectionTitle.hidden = true;
+      el.sectionTitle.textContent = '全部作品';
     } else {
-      el.intro.hidden = true;
-      el.sectionTitle.hidden = false;
       el.sectionTitle.innerHTML = esc(catName(state.currentCat)) +
         '<span class="count">' + list.length + ' 件</span>';
     }
+    el.galleryCount.textContent = list.length + ' 组 · 按时间倒序';
 
     el.gallery.innerHTML = '';
     el.empty.hidden = list.length > 0;
@@ -380,6 +480,7 @@
     }
     render();
     window.scrollTo({ top: 0, behavior: 'auto' });
+    if (window.__applyHeader) window.__applyHeader(0);
   }
 
   /* ---------------- 事件绑定 ---------------- */
@@ -460,18 +561,26 @@
 
     // 滚动：头部状态 + 进度条
     var ticking = false;
+    function applyHeader(y) {
+      // 首屏内：header 透明、白字；滚过首屏：恢复毛玻璃实底
+      var heroH = el.hero ? el.hero.offsetHeight : 0;
+      var over = y < heroH - 44;
+      el.header.classList.toggle('is-over-hero', over);
+      el.header.classList.toggle('is-scrolled', !over && y > 8);
+    }
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function () {
         var y = window.scrollY || document.documentElement.scrollTop;
-        el.header.classList.toggle('is-scrolled', y > 8);
+        applyHeader(y);
         var max = document.documentElement.scrollHeight - window.innerHeight;
         el.progress.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
         ticking = false;
       });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.__applyHeader = applyHeader;
 
     // 尺寸变化重算
     var rt = null;
@@ -479,6 +588,7 @@
       clearTimeout(rt);
       rt = setTimeout(function () {
         layout();
+        applyHeader(window.scrollY || document.documentElement.scrollTop);
         if (!el.viewer.hidden) syncInfoWidth();
       }, 120);
     });
@@ -492,6 +602,7 @@
     }, true);
 
     el.year.textContent = new Date().getFullYear();
+    applyHeader(window.scrollY || 0);
   }
 
   /* ---------------- 启动 ---------------- */
