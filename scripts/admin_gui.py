@@ -749,33 +749,55 @@ class App(tk.Tk):
 
     # ---------------- 推送 ----------------
 
+    def _git_push_state(self):
+        """返回 (未提交改动文件列表, 未推送的提交数)。
+
+        以前只看 git status，导致「已经 commit 但还没 push」时按钮会误报
+        「没有改动」——本地提交推不出去。这里把 ahead 一起算进来。
+        """
+        st = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
+                            capture_output=True, text=True, encoding="utf-8",
+                            errors="replace")
+        changed = [l for l in st.stdout.splitlines() if l.strip()]
+        ahead = 0
+        try:
+            r = subprocess.run(["git", "rev-list", "--count", "@{u}..HEAD"], cwd=ROOT,
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace")
+            ahead = int((r.stdout or "0").strip() or 0)
+        except Exception:
+            ahead = 0
+        return changed, ahead
+
     def push(self):
         if self.dirty and not self.save_works(silent=True):
             return
         try:
-            st = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
-                                capture_output=True, text=True, encoding="utf-8",
-                                errors="replace")
-            changed = [l for l in st.stdout.splitlines() if l.strip()]
+            changed, ahead = self._git_push_state()
         except Exception as e:
             messagebox.showerror("git 不可用", str(e))
             return
-        if not changed:
+        # 工作区干净但本地有未推送的提交，同样要允许推送
+        if not changed and not ahead:
             messagebox.showinfo("没有改动", "本地没有需要推送的修改。")
             return
 
         works = self.works_data.get("works", [])
         shown = sum(1 for w in works if not w.get("hidden"))
-        default_msg = f"更新作品：显示 {shown}/{len(works)} 组"
-        msg = simpledialog.askstring("推送", f"改动 {len(changed)} 个文件，提交说明：",
-                                     initialvalue=default_msg, parent=self)
-        if msg is None:
-            return
-
-        self.set_busy("推送中…")
-        self.log(f"→ 推送 {len(changed)} 个文件", "warn")
-        cmd = ("git add -A && git -c core.quotepath=false commit -m \"%s\" && git push"
-               % (msg or "更新").replace('"', "'"))
+        if changed:
+            default_msg = f"更新作品：显示 {shown}/{len(works)} 组"
+            msg = simpledialog.askstring("推送", f"改动 {len(changed)} 个文件，提交说明：",
+                                         initialvalue=default_msg, parent=self)
+            if msg is None:
+                return
+            self.set_busy("推送中…")
+            self.log(f"→ 提交并推送 {len(changed)} 个文件", "warn")
+            cmd = ("git add -A && git -c core.quotepath=false commit -m \"%s\" && git push"
+                   % (msg or "更新").replace('"', "'"))
+        else:
+            self.set_busy("推送中…")
+            self.log(f"→ 工作区无改动，直接推送本地 {ahead} 个提交", "warn")
+            cmd = "git push"
         self.run_cmd(cmd, "推送", shell=True, on_done=self._after_push)
 
     def _after_push(self, ok):

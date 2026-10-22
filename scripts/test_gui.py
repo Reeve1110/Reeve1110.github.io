@@ -125,6 +125,15 @@ def main():
         names = {app.acc_tree.item(i, "values")[1] for i in app.acc_tree.get_children()}
         check("账号显示名已统一", len(names) <= 1, str(names))
 
+        # 推送状态：已经 commit 但没 push 时也必须算「有东西可推」
+        changed, ahead = app._git_push_state()
+        raw = G.subprocess.run(["git", "rev-list", "--count", "@{u}..HEAD"], cwd=G.ROOT,
+                               capture_output=True, text=True, encoding="utf-8",
+                               errors="replace")
+        expect = int((raw.stdout or "0").strip() or 0)
+        check("推送状态与 git 一致", ahead == expect and isinstance(ahead, int),
+              f"未提交 {len(changed)} / 未推送 {ahead}（git 算 {expect}）")
+
         if shot:
             app.update()
             try:
