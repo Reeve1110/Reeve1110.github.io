@@ -1,25 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Reeve — 摄影</title>
-<meta name="description" content="Reeve 的摄影作品集。记录光与日常。">
+<title>翎溯 — 摄影</title>
+<meta name="description" content="翎溯的摄影作品集。记录光与日常。">
 <meta name="theme-color" content="#0d0c0b">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="index, follow">
 <link rel="preload" href="assets/fonts/shs-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/style.css">
-<script>
-  (function () {
-    try {
-      var t = localStorage.getItem('theme');
-      if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', t);
-    } catch (e) {}
-  })();
-</script>
 </head>
 <body>
 
@@ -29,7 +20,7 @@
   <div class="header-inner">
     <a class="brand" href="#/" aria-label="回到首页">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-text">Reeve</span>
+      <span class="brand-text">翎溯</span>
     </a>
 
     <nav class="nav" id="nav" aria-label="分类">
@@ -38,13 +29,6 @@
     </nav>
 
     <div class="header-tools">
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="切换深浅色">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path class="ico-sun" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.66-5.66 1.41-1.41M4.93 19.07l1.41-1.41m0-11.32L4.93 4.93m14.14 14.14-1.41-1.41" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-          <circle class="ico-sun" cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6" fill="none"/>
-          <path class="ico-moon" d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
-        </svg>
-      </button>
       <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="更多分类" aria-expanded="false" hidden>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>
@@ -66,10 +50,10 @@
 
     <div class="hero-inner">
       <div class="hero-lead">
-        <img class="hero-avatar" id="heroAvatar" alt="Reeve 的头像" width="88" height="88" hidden>
+        <img class="hero-avatar" id="heroAvatar" alt="翎溯的头像" width="88" height="88" hidden>
 
         <p class="hero-eyebrow" id="heroEyebrow">Photography</p>
-        <h1 class="hero-name" id="heroName">Reeve</h1>
+        <h1 class="hero-name" id="heroName">翎溯</h1>
         <p class="hero-bio" id="heroBio"></p>
         <p class="hero-meta" id="heroMeta"></p>
 
@@ -104,7 +88,7 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <p>© <span id="year"></span> Reeve</p>
+    <p>© <span id="year"></span> 翎溯</p>
     <p class="footer-note">图片版权归作者所有，转载请先联系。</p>
   </div>
 </footer>

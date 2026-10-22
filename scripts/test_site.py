@@ -16,6 +16,18 @@ BASE = "http://127.0.0.1:8765/"
 results = []
 
 
+def site_author():
+    """显示名以 data/profile.json 为准，改名字不用改测试。"""
+    try:
+        with open(os.path.join(ROOT, "data", "profile.json"), encoding="utf-8") as f:
+            return (json.load(f).get("name") or "").strip()
+    except Exception:
+        return ""
+
+
+AUTHOR = site_author()
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     print(("PASS  " if ok else "FAIL  ") + name + (f"   [{detail}]" if detail else ""), flush=True)
@@ -130,7 +142,8 @@ def run(pw, label, viewport, mobile=False, shots_prefix=""):
     check(f"{label} 首页卡片数量", cards > 0, f"{cards} 张")
 
     # 2. 标题 / 结构
-    check(f"{label} 站点标题", page.title() != "" and "Reeve" in page.title(), page.title())
+    check(f"{label} 站点标题",
+          page.title() != "" and (not AUTHOR or AUTHOR in page.title()), page.title())
     check(f"{label} 头部存在", page.locator("#siteHeader").is_visible())
 
     # 2b. 首屏
@@ -310,14 +323,17 @@ def run(pw, label, viewport, mobile=False, shots_prefix=""):
     )
     check(f"{label} 无横向滚动溢出", overflow <= 1, f"{overflow}px")
 
-    # 12. 切主题
+    # 12. 固定暗色：默认 dark、没有切换按钮、底色确实是深色
     page.goto(BASE, wait_until="networkidle")
-    page.click("#themeBtn")
-    page.wait_for_timeout(400)
+    page.wait_for_timeout(300)
     theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-    check(f"{label} 主题切换生效", theme in ("dark", "light"), theme)
-    page.screenshot(path=os.path.join(SHOTS, f"{shots_prefix}theme-{theme}.png"))
-    page.click("#themeBtn")
+    check(f"{label} 默认暗色主题", theme == "dark", theme)
+    check(f"{label} 已移除主题切换按钮", page.locator("#themeBtn").count() == 0,
+          f"{page.locator('#themeBtn').count()} 个")
+    body_bg = page.evaluate("() => getComputedStyle(document.body).backgroundColor")
+    rgb = [int(x) for x in body_bg.replace("rgba(", "").replace("rgb(", "").rstrip(")").split(",")[:3]]
+    check(f"{label} 底色为暗色", sum(rgb) / 3 < 60, body_bg)
+    page.screenshot(path=os.path.join(SHOTS, f"{shots_prefix}dark-fixed.png"))
 
     # 13. 边界路由
     page.goto(BASE + "#/work/__not_exist__", wait_until="networkidle")

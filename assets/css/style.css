@@ -1,5 +1,5 @@
 /* ===========================================================
-   Reeve Photography — 样式表
+   摄影站 — 样式表（固定暗色）
    设计原则：留白优先、照片优先、装饰最少。
    字体：全站思源黑体（Source Han Sans CN），按实际用字裁剪为 woff2
          （scripts/build_font_subset.py 生成，两个权重合计约 220KB）
@@ -21,16 +21,17 @@
 }
 
 :root {
-  --bg: #ffffff;
-  --bg-soft: #f7f7f6;
-  --fg: #14110f;
-  --fg-soft: #55504b;
-  --muted: #8e8880;
-  --line: #e6e3de;
-  --line-strong: #cfcac3;
-  --accent: #14110f;
-  --header-bg: rgba(255, 255, 255, .82);
-  --shadow: 0 8px 30px rgba(20, 17, 15, .10);
+  /* 全站固定暗色（不再提供明暗切换） */
+  --bg: #0d0c0b;
+  --bg-soft: #161514;
+  --fg: #f2efea;
+  --fg-soft: #b8b2a9;
+  --muted: #847e76;
+  --line: #262422;
+  --line-strong: #3a3633;
+  --accent: #f2efea;
+  --header-bg: rgba(13, 12, 11, .82);
+  --shadow: 0 8px 30px rgba(0, 0, 0, .5);
   --radius: 2px;
 
   /* 全站唯一字体：思源黑体；缺字时按顺序回落到系统里的同族字体 */
@@ -43,19 +44,6 @@
   --gap: 18px;
   --page-max: 1560px;
   --pad: 40px;
-}
-
-[data-theme="dark"] {
-  --bg: #0d0c0b;
-  --bg-soft: #161514;
-  --fg: #f2efea;
-  --fg-soft: #b8b2a9;
-  --muted: #847e76;
-  --line: #262422;
-  --line-strong: #3a3633;
-  --accent: #f2efea;
-  --header-bg: rgba(13, 12, 11, .82);
-  --shadow: 0 8px 30px rgba(0, 0, 0, .5);
 }
 
 * { box-sizing: border-box; }
@@ -202,9 +190,6 @@ button {
 .icon-btn:hover { background: var(--bg-soft); color: var(--fg); }
 
 .menu-btn { display: none; }
-
-[data-theme="light"] .ico-moon { display: none; }
-[data-theme="dark"] .ico-sun { display: none; }
 
 .header-progress {
   position: absolute;

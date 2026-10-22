@@ -1,5 +1,5 @@
 /* ===========================================================
-   Reeve Photography — 前端逻辑
+   摄影站 — 前端逻辑（固定暗色，无主题切换）
    单一数据源：data/works.json
    路由：#/           全部
          #/c/<key>   分类
@@ -18,7 +18,6 @@
     galleryCount: document.getElementById('galleryCount'),
     nav: document.getElementById('nav'),
     menuBtn: document.getElementById('menuBtn'),
-    themeBtn: document.getElementById('themeBtn'),
     header: document.getElementById('siteHeader'),
     progress: document.getElementById('headerProgress'),
     year: document.getElementById('year'),
@@ -175,7 +174,7 @@
       }
     }
 
-    var name = p.name || state.site.title || 'Reeve';
+    var name = p.name || state.site.title || '翎溯';
     el.heroName.textContent = name;
     el.heroEyebrow.textContent = p.role || 'Photography';
     el.heroBio.textContent = p.bio || state.site.subtitle || '';
@@ -529,16 +528,6 @@
         if (history.length > 1) history.back(); else location.hash = '#/';
       }
     }, { passive: true });
-
-    // 主题
-    el.themeBtn.addEventListener('click', function () {
-      var cur = document.documentElement.getAttribute('data-theme');
-      var next = cur === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      try { localStorage.setItem('theme', next); } catch (err) {}
-      var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', next === 'dark' ? '#0d0c0b' : '#ffffff');
-    });
 
     // 移动端菜单
     el.menuBtn.addEventListener('click', function (e) {
