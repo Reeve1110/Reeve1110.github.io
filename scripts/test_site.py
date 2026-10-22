@@ -56,10 +56,28 @@ def hero_checks(page, label):
           (bg["src"] or "")[-46:])
     check(f"{label} 背景铺满不变形", bg["cover"] == "cover", bg["cover"])
 
+    # 封面版本号：rev 变了图片 URL 就变，换封面时不会读到 CDN 旧图
+    rev = page.evaluate(
+        """() => {
+        const w = window.__site.works[0] || {};
+        const im = (w.images || [])[0] || {};
+        return {rev: w.rev || '', src: im.src || '', thumb: w.thumb || ''};
+    }""")
+    tag = ("v=" + rev["rev"]) if rev["rev"] else ""
+    check(f"{label} 封面带版本号（换封面可破缓存）",
+          bool(tag) and tag in rev["src"] and tag in rev["thumb"],
+          f"rev={rev['rev']} · {rev['src'][-22:]}")
+
     name = page.locator("#heroName").inner_text().strip()
     bio = page.locator("#heroBio").inner_text().strip()
+    prof_bio = page.evaluate("() => ((window.__site.profile || {}).bio || '').trim()")
     check(f"{label} 展示名字", name != "", name)
-    check(f"{label} 展示个性签名", bio != "", bio[:26])
+    # 签名可以留空：为空时不渲染、也不许用副标题或默认文案补位
+    check(f"{label} 签名与配置一致（允许为空）",
+          (prof_bio != "") == (bio != ""),
+          f"profile={prof_bio[:14]!r} dom={bio[:14]!r}")
+    check(f"{label} 无默认签名文案",
+          "记录光与日常" not in page.evaluate("() => document.body.innerText"))
     av = page.evaluate(
         "() => { const a = document.getElementById('heroAvatar');"
         " return a.hidden ? 0 : a.naturalWidth; }")

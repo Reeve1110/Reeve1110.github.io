@@ -102,6 +102,26 @@
       });
   }
 
+  // 图片版本号：works.json 的 rev 是「封面源图」的指纹。
+  // 小红书换了封面 → rev 变 → 图片 URL 带上 ?v=，CDN 缓存立刻失效，线上同步换图。
+  function withRev(url, rev) {
+    if (!url || !rev) return url;
+    return url + (url.indexOf('?') > -1 ? '&' : '?') + 'v=' + encodeURIComponent(rev);
+  }
+
+  function applyRevisions() {
+    state.works.forEach(function (w) {
+      var rev = w.rev;
+      if (!rev) return;
+      (w.images || []).forEach(function (im) {
+        if (!im) return;
+        im.src = withRev(im.src, rev);
+        im.thumb = withRev(im.thumb, rev);
+      });
+      w.thumb = withRev(w.thumb, rev);
+    });
+  }
+
   function init(data, profile) {
     state.site = data.site || {};
     state.profile = profile || {};
@@ -135,6 +155,8 @@
     state.works.sort(function (a, b) {
       return String(b.date || '').localeCompare(String(a.date || ''));
     });
+
+    applyRevisions();
 
     state.ready = true;
     renderHero();
@@ -177,7 +199,8 @@
     var name = p.name || state.site.title || '翎溯';
     el.heroName.textContent = name;
     el.heroEyebrow.textContent = p.role || 'Photography';
-    el.heroBio.textContent = p.bio || state.site.subtitle || '';
+    // 签名为空就真的不显示（不再用副标题兜底，也不再写默认文案）
+    el.heroBio.textContent = p.bio || '';
     el.heroBio.hidden = !el.heroBio.textContent;
 
     // 统计：组数 / 系列 / 年份跨度

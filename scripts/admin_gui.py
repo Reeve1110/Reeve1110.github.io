@@ -328,7 +328,7 @@ class App(tk.Tk):
 
         tip = ttk.Label(
             box,
-            text="提示：换行会被保留，首屏按原样分行显示；"
+            text="提示：留空则不显示签名（不会补任何默认文案）；换行会被保留，首屏按原样分行显示。"
                  "选「同步小红书」后每次抓取/同步都会用小红书上的简介替换这里的内容。",
             style="Soft.TLabel", wraplength=720, justify="left")
         tip.grid(row=7, column=0, columnspan=2, sticky="w", pady=(14, 0))

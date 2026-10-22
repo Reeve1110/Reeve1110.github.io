@@ -22,6 +22,7 @@
   --refresh 会把已有笔记重新打开一遍，用最新标题、正文、图片、标签替换，
   但 works.json 里的 date / year（首次发布日期）绝不改动，slug 与图片目录也不变。
 """
+import hashlib
 import json
 import os
 import re
@@ -595,6 +596,21 @@ def site_title():
     return ((accs[0].get("name") or "").strip() if accs else "") or "作者"
 
 
+def cover_rev(source_images):
+    """封面指纹：取笔记第一张图的源地址做短哈希。
+
+    小红书换封面后源地址会变 → rev 变 → 前端给图片 URL 拼 ?v=<rev>，
+    CDN 缓存立刻失效，网站上的封面图跟着更新；没换封面则 rev 不变，缓存继续有效。
+    """
+    u = ""
+    try:
+        if source_images:
+            u = str(source_images[0].get("url") or "")
+    except Exception:
+        u = ""
+    return hashlib.md5(u.encode("utf-8")).hexdigest()[:10] if u else ""
+
+
 def build_works(accounts, refresh=False):
     """汇总所有账号的笔记。
 
@@ -642,6 +658,8 @@ def build_works(accounts, refresh=False):
                     "images": imgs,
                     "thumb": imgs[0]["thumb"] if imgs else prev.get("thumb", ""),
                     "author": author,
+                    # 封面指纹变化 → 前端换 ?v=，确保换封面后线上立刻更新
+                    "rev": cover_rev(n.get("images")) or prev.get("rev", ""),
                 })
                 if n.get("url"):
                     w["source"] = n["url"]
@@ -673,6 +691,7 @@ def build_works(accounts, refresh=False):
                 "source": n["url"],
                 "thumb": imgs[0]["thumb"],
                 "images": imgs,
+                "rev": cover_rev(n.get("images")),
                 "hidden": False,
             })
 
@@ -714,7 +733,8 @@ def build_works(accounts, refresh=False):
     data = {
         "site": {
             "title": author if author else "摄影",
-            "subtitle": "记录光与日常。",
+            # 副标题默认为空：个性签名不再有任何默认文案
+            "subtitle": "",
             "authors": authors or ([author] if author else []),
         },
         "categories": cats,
