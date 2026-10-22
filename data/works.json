@@ -18,9 +18,297 @@
     {
       "key": "city",
       "name": "城市"
+    },
+    {
+      "key": "other",
+      "name": "其他"
     }
   ],
   "works": [
+    {
+      "id": "6ac5066f0000000015008adf",
+      "slug": "2026-10-06-09-小狗当然要出去撒欢啦",
+      "author": "Reeve",
+      "title": "小狗当然要出去撒欢啦",
+      "caption": "#比熊 #小狗 #狗狗 #带小狗出去玩 #带狗子去撒欢",
+      "date": "2026-10-06",
+      "year": "2026",
+      "tags": [
+        "比熊",
+        "小狗",
+        "狗狗",
+        "带小狗出去玩",
+        "带狗子去撒欢"
+      ],
+      "category": "pets",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6ac5066f0000000015008adf",
+      "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/01.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/01_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/02.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/02_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/03.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/03_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/04.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/04_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/05.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/05_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/06.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/06_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/07.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/07_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/08.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/08_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/09.webp",
+          "thumb": "images/works/2026-10-06-09-小狗当然要出去撒欢啦/09_t.webp",
+          "w": 1600,
+          "h": 899
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "6a3ce179000000000f033bae",
+      "slug": "2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇",
+      "author": "Reeve",
+      "title": "以为是蜜蜂，原来是斑眼食蚜蝇！",
+      "caption": "斑眼食蚜蝇（Eristalis arvorum），双翅目食蚜蝇科管蚜蝇属，体长10—11毫米。复眼黄色、密布黑褐色斑点，前胸背板4条黑色纵带，腹部具宽大黑色横带，外形拟态蜜蜂。常见于花间悬停访花，无螫刺，是温驯的传粉者。\n#斑眼食蚜蝇 #昆虫 #微距 #微距摄影 #摄影 #探索微观世界",
+      "date": "2026-06-25",
+      "year": "2026",
+      "tags": [
+        "斑眼食蚜蝇",
+        "昆虫",
+        "微距",
+        "微距摄影",
+        "摄影",
+        "探索微观世界"
+      ],
+      "category": "other",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6a3ce179000000000f033bae",
+      "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/01.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/01_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/02.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/02_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/03.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/03_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/04.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/04_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/05.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/05_t.webp",
+          "w": 1600,
+          "h": 899
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/06.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/06_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/07.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/07_t.webp",
+          "w": 1600,
+          "h": 899
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/08.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/08_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/09.webp",
+          "thumb": "images/works/2026-06-25-10-以为是蜜蜂-原来是斑眼食蚜蝇/09_t.webp",
+          "w": 1600,
+          "h": 900
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "6a1d3081000000003502da57",
+      "slug": "2026-06-01-11-QVTU-离场",
+      "author": "Reeve",
+      "title": "QVTU｜离场",
+      "caption": "当人群散去，喧嚣归于沉寂，阳光穿过蒙尘的窗户，落在积灰的桌椅、柜子与褪色的泳圈上，也照见生锈的长凳、空置的球架，以及被遗落在储物柜里的证书。\n#泉州职业技术大学 #大学 #角落 #废弃 #废弃建筑 #遗忘 #时光的痕迹 #校园 #校园生活",
+      "date": "2026-06-01",
+      "year": "2026",
+      "tags": [
+        "泉州职业技术大学",
+        "大学",
+        "角落",
+        "废弃",
+        "废弃建筑",
+        "遗忘",
+        "时光的痕迹",
+        "校园",
+        "校园生活"
+      ],
+      "category": "campus",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6a1d3081000000003502da57",
+      "thumb": "images/works/2026-06-01-11-QVTU-离场/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-06-01-11-QVTU-离场/01.webp",
+          "thumb": "images/works/2026-06-01-11-QVTU-离场/01_t.webp",
+          "w": 947,
+          "h": 1600
+        },
+        {
+          "src": "images/works/2026-06-01-11-QVTU-离场/02.webp",
+          "thumb": "images/works/2026-06-01-11-QVTU-离场/02_t.webp",
+          "w": 948,
+          "h": 1600
+        },
+        {
+          "src": "images/works/2026-06-01-11-QVTU-离场/03.webp",
+          "thumb": "images/works/2026-06-01-11-QVTU-离场/03_t.webp",
+          "w": 947,
+          "h": 1600
+        },
+        {
+          "src": "images/works/2026-06-01-11-QVTU-离场/04.webp",
+          "thumb": "images/works/2026-06-01-11-QVTU-离场/04_t.webp",
+          "w": 947,
+          "h": 1600
+        },
+        {
+          "src": "images/works/2026-06-01-11-QVTU-离场/05.webp",
+          "thumb": "images/works/2026-06-01-11-QVTU-离场/05_t.webp",
+          "w": 948,
+          "h": 1600
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "6a1c39c50000000035039a1d",
+      "slug": "2026-05-31-12-QVTU-窗外的绿意",
+      "author": "Reeve",
+      "title": "QVTU｜窗外的绿意",
+      "caption": "午后阳光穿过百叶窗，斑驳光影洒在教室内，夏日的绿意被定格在窗格之间。\n#泉州职业技术大学 #大学 #百叶窗 #午后的阳光 #泉州 #光影 #治愈 #夏天 #窗外的世界 #窗外的景色",
+      "date": "2026-05-31",
+      "year": "2026",
+      "tags": [
+        "泉州职业技术大学",
+        "大学",
+        "百叶窗",
+        "午后的阳光",
+        "泉州",
+        "光影",
+        "治愈",
+        "夏天",
+        "窗外的世界",
+        "窗外的景色"
+      ],
+      "category": "campus",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6a1c39c50000000035039a1d",
+      "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/01.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/01_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/02.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/02_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/03.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/03_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/04.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/04_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/05.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/05_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/06.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/06_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/07.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/07_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-31-12-QVTU-窗外的绿意/08.webp",
+          "thumb": "images/works/2026-05-31-12-QVTU-窗外的绿意/08_t.webp",
+          "w": 1600,
+          "h": 900
+        }
+      ],
+      "hidden": false
+    },
     {
       "id": "6a110c550000000008032756",
       "slug": "2026-05-23-01-泉州猫猫找领养-福宝",
@@ -65,6 +353,118 @@
       ],
       "author": "Reeve",
       "hidden": true
+    },
+    {
+      "id": "6a09a305000000003502b278",
+      "slug": "2026-05-17-13-泉州西街-悠哉街角",
+      "author": "Reeve",
+      "title": "泉州西街｜悠哉街角",
+      "caption": "小狗悠哉地躺在路边睡觉\n#西街 #泉州西街 #小狗 #修狗 #泉州 #狗狗 #城市的角落",
+      "date": "2026-05-17",
+      "year": "2026",
+      "tags": [
+        "西街",
+        "泉州西街",
+        "小狗",
+        "修狗",
+        "泉州",
+        "狗狗",
+        "城市的角落"
+      ],
+      "category": "pets",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6a09a305000000003502b278",
+      "thumb": "images/works/2026-05-17-13-泉州西街-悠哉街角/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-05-17-13-泉州西街-悠哉街角/01.webp",
+          "thumb": "images/works/2026-05-17-13-泉州西街-悠哉街角/01_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-13-泉州西街-悠哉街角/02.webp",
+          "thumb": "images/works/2026-05-17-13-泉州西街-悠哉街角/02_t.webp",
+          "w": 1600,
+          "h": 900
+        }
+      ],
+      "hidden": false
+    },
+    {
+      "id": "6a09918a000000003502e939",
+      "slug": "2026-05-17-14-泉州开元寺-寺影独行",
+      "author": "Reeve",
+      "title": "泉州开元寺｜寺影独行",
+      "caption": "开元寺的游客逐渐散去，小香从树上下到地面，自顾静坐凝望远方。\n#泉州 #西街 #开元寺 #寺院猫 #猫咪",
+      "date": "2026-05-17",
+      "year": "2026",
+      "tags": [
+        "泉州",
+        "西街",
+        "开元寺",
+        "寺院猫",
+        "猫咪"
+      ],
+      "category": "pets",
+      "source": "https://www.xiaohongshu.com/user/profile/6815a7c1000000000a03ec2a/6a09918a000000003502e939",
+      "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/01_t.webp",
+      "images": [
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/01.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/01_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/02.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/02_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/03.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/03_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/04.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/04_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/05.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/05_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/06.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/06_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/07.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/07_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/08.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/08_t.webp",
+          "w": 1600,
+          "h": 900
+        },
+        {
+          "src": "images/works/2026-05-17-14-泉州开元寺-寺影独行/09.webp",
+          "thumb": "images/works/2026-05-17-14-泉州开元寺-寺影独行/09_t.webp",
+          "w": 1600,
+          "h": 900
+        }
+      ],
+      "hidden": false
     },
     {
       "id": "69520b78000000001f00f79f",
