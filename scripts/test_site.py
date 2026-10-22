@@ -84,6 +84,12 @@ def hero_checks(page, label):
           f"profile={prof_bio[:14]!r} dom={bio[:14]!r}")
     check(f"{label} 无默认签名文案",
           "记录光与日常" not in page.evaluate("() => document.body.innerText"))
+
+    # 收录相关：canonical 固定指向主域名，避免 www / 裸域重复收录
+    canon = page.evaluate(
+        "() => { const l = document.querySelector('link[rel=canonical]'); return l ? l.href : ''; }")
+    check(f"{label} canonical 指向主域名",
+          canon.rstrip("/") == "https://www.frw.fan", canon)
     av = page.evaluate(
         "() => { const a = document.getElementById('heroAvatar');"
         " return a.hidden ? 0 : a.naturalWidth; }")

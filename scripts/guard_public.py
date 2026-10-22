@@ -27,6 +27,8 @@ PUBLIC_FILES = [
     "data/profile.json",
     "data/ai.example.json",
     "README.md",
+    "robots.txt",
+    "sitemap.xml",
 ]
 
 PUBLIC_DATA = ("works.json", "profile.json", "ai.example.json")
