@@ -298,12 +298,13 @@ class App(tk.Tk):
         ttk.Label(box, text="名字会显示在首屏大标题和左上角", style="Soft.TLabel").grid(
             row=1, column=1, sticky="w", padx=(12, 0))
 
-        ttk.Label(box, text="小标题", style="Soft.TLabel").grid(
+        ttk.Label(box, text="小标题 / 副标题", style="Soft.TLabel").grid(
             row=2, column=0, sticky="w", pady=(14, 4))
         self.var_role = tk.StringVar()
         ttk.Entry(box, textvariable=self.var_role, width=30).grid(
             row=3, column=0, sticky="w")
-        ttk.Label(box, text="例如 Photography · 摄影", style="Soft.TLabel").grid(
+        ttk.Label(box, text="显示在名字上方；留空则不显示（例如 Photography · 摄影）",
+                  style="Soft.TLabel").grid(
             row=3, column=1, sticky="w", padx=(12, 0))
 
         ttk.Label(box, text="个性签名", style="Soft.TLabel").grid(

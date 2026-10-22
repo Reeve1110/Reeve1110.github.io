@@ -198,7 +198,9 @@
 
     var name = p.name || state.site.title || '翎溯';
     el.heroName.textContent = name;
-    el.heroEyebrow.textContent = p.role || 'Photography';
+    // 小标题/副标题同样可留空：为空就不渲染，不再兜底 'Photography'
+    el.heroEyebrow.textContent = p.role || '';
+    el.heroEyebrow.hidden = !el.heroEyebrow.textContent;
     // 签名为空就真的不显示（不再用副标题兜底，也不再写默认文案）
     el.heroBio.textContent = p.bio || '';
     el.heroBio.hidden = !el.heroBio.textContent;

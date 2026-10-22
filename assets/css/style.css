@@ -473,7 +473,9 @@ main { display: block; }
 
 .hero-connect[hidden],
 .hero-avatar[hidden],
-.hero-latest[hidden] { display: none !important; }
+.hero-latest[hidden],
+.hero-eyebrow[hidden],
+.hero-bio[hidden] { display: none !important; }
 
 /* ---------------- 作品区 ---------------- */
 

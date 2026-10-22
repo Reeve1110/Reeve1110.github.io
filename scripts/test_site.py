@@ -70,9 +70,15 @@ def hero_checks(page, label):
 
     name = page.locator("#heroName").inner_text().strip()
     bio = page.locator("#heroBio").inner_text().strip()
+    eyebrow = page.locator("#heroEyebrow").inner_text().strip()
     prof_bio = page.evaluate("() => ((window.__site.profile || {}).bio || '').trim()")
+    prof_role = page.evaluate("() => ((window.__site.profile || {}).role || '').trim()")
     check(f"{label} 展示名字", name != "", name)
-    # 签名可以留空：为空时不渲染、也不许用副标题或默认文案补位
+    # 小标题（副标题）与签名都允许为空：为空即不渲染，也不许有默认文案兜底
+    # 注意 CSS 上有 text-transform: uppercase，比较时要归一化大小写
+    check(f"{label} 小标题与配置一致（允许为空）",
+          eyebrow.lower() == prof_role.lower(),
+          f"profile={prof_role[:14]!r} dom={eyebrow[:14]!r}")
     check(f"{label} 签名与配置一致（允许为空）",
           (prof_bio != "") == (bio != ""),
           f"profile={prof_bio[:14]!r} dom={bio[:14]!r}")
