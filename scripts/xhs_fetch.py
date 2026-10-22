@@ -12,9 +12,15 @@
 用法：
   python scripts/xhs_fetch.py                    # 所有 enabled 账号
   python scripts/xhs_fetch.py --account photo    # 只抓某个账号
+  python scripts/xhs_fetch.py --refresh          # 刷新已有笔记的内容（发布日期不变）
   python scripts/xhs_fetch.py --meta-only        # 只抓元数据
   python scripts/xhs_fetch.py --images-only      # 只下载图片
   python scripts/xhs_fetch.py --limit 5
+
+--refresh 与默认抓取的区别：
+  默认只追加新笔记，已有条目原样保留（保护人工改过的分类/隐藏）；
+  --refresh 会把已有笔记重新打开一遍，用最新标题、正文、图片、标签替换，
+  但 works.json 里的 date / year（首次发布日期）绝不改动，slug 与图片目录也不变。
 """
 import json
 import os
@@ -282,9 +288,14 @@ def block_heavy(route):
     return route.continue_()
 
 
-def scrape(page, acc, limit=None, force=False):
-    """抓单个账号。acc = {"key","name","user_id"}"""
-    account, uid, author = acc["key"], acc["user_id"], acc.get("name") or acc["key"]
+def scrape(page, acc, limit=None, force=False, refresh=False):
+    """抓单个账号。acc = {"key","name","user_id"}
+
+    refresh=True：已经抓过的笔记也重新打开详情，用最新内容覆盖 notes_<account>.json。
+    日期一律沿用首次抓到的那天 —— 小红书编辑笔记不会改首次发布时间，这里再兜一层，
+    保证「刷新状态」永远不动发布日期。
+    """
+    account, uid, author = acc["key"], acc["user_id"], site_title()
     url = f"https://www.xiaohongshu.com/user/profile/{uid}"
     t_open = time.time()
     # 注意：必须用 commit。小红书主页的 DOMContentLoaded 会被拖到 ~28s，
@@ -341,7 +352,9 @@ def scrape(page, acc, limit=None, force=False):
     t_scroll = time.time()
     ex = load_exclude()
     notes = [] if force else load_notes(account)
-    done = {n["id"] for n in notes}
+    index = {} if force else {n["id"]: n for n in notes}
+    done = set() if refresh else set(index)   # 刷新模式：不跳过已经抓过的笔记
+    updated = 0
     visited = 0
     t_detail = time.time()
     for i, it in enumerate(items):
@@ -409,6 +422,19 @@ def scrape(page, acc, limit=None, force=False):
             print(f"跳过（{why}）", flush=True)
             continue
 
+        if refresh and it["id"] in index:
+            # 内容取最新的，日期沿用首次发布的那天
+            note["date"] = index[it["id"]].get("date") or date
+            note["refreshed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            for k, x in enumerate(notes):
+                if x["id"] == it["id"]:
+                    notes[k] = note
+                    break
+            save_notes(account, notes)
+            updated += 1
+            print(f"已刷新 · {note['date']} · {note['title'][:16]}", flush=True)
+            continue
+
         notes.append(note)
         save_notes(account, notes)     # 增量落盘，崩溃不丢进度
         print(f"{len(imgs)} 图 · {date} · {note['title'][:16]}", flush=True)
@@ -419,6 +445,8 @@ def scrape(page, acc, limit=None, force=False):
               f"滚动加载 {t_scan - t_ready:.1f}s · "
               f"详情 {visited} 条 {time.time() - t_detail:.1f}s（均 {avg:.2f}s/条）",
               flush=True)
+    if refresh:
+        print(f"[{account}] 刷新完成：更新 {updated} 条（发布日期保持不变）", flush=True)
     return notes
 
 
@@ -471,7 +499,12 @@ def process(raw_path, full_path, thumb_path):
         return full.size
 
 
-def build_images(note, slug):
+def build_images(note, slug, force=False):
+    """把笔记图片下载并转成本地 webp。
+
+    force=True（刷新模式）：已存在的图也重新下载，因为笔记编辑后图片可能换过。
+    下载/转码失败的图会跳过；只要还有可用图，调用方就拿去替换，不会把整组图搞丢。
+    """
     out_dir = os.path.join(IMG_ROOT, slug)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -482,7 +515,7 @@ def build_images(note, slug):
         full_p = os.path.join(out_dir, name + ".webp")
         thumb_p = os.path.join(out_dir, name + "_t.webp")
 
-        if os.path.exists(full_p) and os.path.exists(thumb_p):
+        if not force and os.path.exists(full_p) and os.path.exists(thumb_p):
             try:
                 with Image.open(full_p) as ex:
                     result.append({"src": f"images/works/{slug}/{name}.webp",
@@ -494,6 +527,16 @@ def build_images(note, slug):
 
         if not download(src, TMP_IMG):
             print(f"图{i}失败 ", end="", flush=True)
+            if os.path.exists(full_p) and os.path.exists(thumb_p):
+                # 刷新时下载失败：沿用旧图，避免内容被刷成残缺
+                try:
+                    with Image.open(full_p) as ex:
+                        result.append({"src": f"images/works/{slug}/{name}.webp",
+                                       "thumb": f"images/works/{slug}/{name}_t.webp",
+                                       "w": ex.size[0], "h": ex.size[1]})
+                    continue
+                except Exception:
+                    pass
             continue
         try:
             fw, fh = process(TMP_IMG, full_p, thumb_p)
@@ -509,7 +552,22 @@ def build_images(note, slug):
             os.remove(TMP_IMG)
         except OSError:
             pass
+
+    # 笔记被删了图时，目录里会留下旧的 05/06 之类，清掉多出来的
+    if result:
+        prune_images(out_dir, len(result))
     return result
+
+
+def prune_images(out_dir, keep):
+    """删掉编号超过 keep 的旧图（只认 NN.webp / NN_t.webp 这两种命名）。"""
+    for name in os.listdir(out_dir):
+        m = re.match(r"^(\d{2})(_t)?\.webp$", name)
+        if m and int(m.group(1)) > keep:
+            try:
+                os.remove(os.path.join(out_dir, name))
+            except OSError:
+                pass
 
 
 def load_works():
@@ -523,14 +581,34 @@ def load_works():
         return {}
 
 
-def build_works(accounts):
-    """汇总所有账号的笔记。已存在的作品条目原样保留——
-    这样手工改过的 category / title / hidden 不会被重新抓取覆盖。"""
+def site_title():
+    """全站显示名：统一取 data/profile.json 的 name。
+    多个小红书账号都是同一个人的，所以作者名不按账号区分。"""
+    try:
+        with open(os.path.join(DATA, "profile.json"), encoding="utf-8") as f:
+            n = (json.load(f).get("name") or "").strip()
+        if n:
+            return n
+    except Exception:
+        pass
+    accs = load_accounts().get("accounts", [])
+    return ((accs[0].get("name") or "").strip() if accs else "") or "作者"
+
+
+def build_works(accounts, refresh=False):
+    """汇总所有账号的笔记。
+
+    默认：已存在的作品条目原样保留，手工改过的 category / title / hidden 不会被重复抓取覆盖。
+    refresh=True：已有条目用最新内容替换 title / caption / tags / images / author，
+    但 slug（图片目录）、date / year（首次发布日期）、category、hidden 一律沿用旧值。
+    """
     cat_names = {"pets": "萌宠", "campus": "校园", "city": "城市",
                  "landscape": "风景", "other": "其他"}
+    author = site_title()
     old = load_works()
     works = []
     seen = set()
+    n_refreshed = 0
 
     for acc in accounts:
         for n in load_notes(acc["key"]):
@@ -538,9 +616,39 @@ def build_works(accounts):
                 continue
             seen.add(n["id"])
 
-            if n["id"] in old:
+            if n["id"] in old and not refresh:
                 works.append(old[n["id"]])     # 保留人工修改
                 print(f"已有 {n['id']}，保留原条目", flush=True)
+                continue
+
+            if n["id"] in old:
+                prev = old[n["id"]]
+                title = clean_text(n["title"]) or prev.get("title") or "无题"
+                caption = clean_text(n["desc"])
+                slug = prev.get("slug") or slugify(title, prev.get("date") or n["date"],
+                                                  len(works) + 1)
+                print(f"刷新 {slug} ...", end=" ", flush=True)
+                imgs = build_images(n, slug, force=True)
+                if not imgs:
+                    imgs = prev.get("images") or []
+                    print("图片未取到，沿用旧图 · ", end="", flush=True)
+                else:
+                    print(f"{len(imgs)} 张 · ", end="", flush=True)
+                w = dict(prev)
+                w.update({
+                    "title": title,
+                    "caption": caption,
+                    "tags": n.get("tags") or prev.get("tags") or [],
+                    "images": imgs,
+                    "thumb": imgs[0]["thumb"] if imgs else prev.get("thumb", ""),
+                    "author": author,
+                })
+                if n.get("url"):
+                    w["source"] = n["url"]
+                # date / year / slug / category / hidden 保持原值 —— 发布日期绝不改
+                works.append(w)
+                n_refreshed += 1
+                print(f"发布日期仍为 {w.get('date', '')}", flush=True)
                 continue
 
             title = clean_text(n["title"]) or "无题"
@@ -555,7 +663,7 @@ def build_works(accounts):
             works.append({
                 "id": n["id"],
                 "slug": slug,
-                "author": n.get("author", ""),
+                "author": author,
                 "title": title,
                 "caption": caption,
                 "date": n["date"],
@@ -605,9 +713,9 @@ def build_works(accounts):
 
     data = {
         "site": {
-            "title": "Reeve",
+            "title": author if author else "摄影",
             "subtitle": "记录光与日常。",
-            "authors": authors,
+            "authors": authors or ([author] if author else []),
         },
         "categories": cats,
         "works": works,
@@ -619,6 +727,9 @@ def build_works(accounts):
     visible = sum(1 for w in works if not w.get("hidden"))
     print(f"\n站点数据已生成：{WORKS_JSON}"
           f"（{len(works)} 个作品，其中 {visible} 个对外显示）", flush=True)
+    if refresh:
+        print(f"本次刷新 {n_refreshed} 个已有作品的内容，发布日期全部保持首次发布时不变",
+              flush=True)
     return data
 
 
@@ -640,6 +751,7 @@ def main():
     meta_only = "--meta-only" in sys.argv
     images_only = "--images-only" in sys.argv
     force = "--force" in sys.argv
+    refresh = "--refresh" in sys.argv
 
     accs = [a for a in load_accounts()["accounts"] if a.get("enabled", True)]
     if only_account:
@@ -667,7 +779,7 @@ def main():
             ctx.route("**/*", block_heavy)      # 不下载图片/字体/视频
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
             try:
-                notes = scrape(page, acc, limit, force=force)
+                notes = scrape(page, acc, limit, force=force, refresh=refresh)
                 print(f"[{acc['key']}] 元数据 {len(notes)} 条", flush=True)
             finally:
                 try:
@@ -677,7 +789,7 @@ def main():
                     pass
 
     if not meta_only:
-        build_works(ready)
+        build_works(ready, refresh=refresh)
 
 
 if __name__ == "__main__":

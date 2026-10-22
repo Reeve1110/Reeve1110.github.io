@@ -51,7 +51,8 @@ def load_accounts():
             with open(legacy, encoding="utf-8") as f:
                 old = json.load(f)
             if old.get("user_id"):
-                accounts.append({"key": "default", "name": "Reeve",
+                # 显示名统一由管理工具按 profile.json 的 name 回填，这里不必硬编码
+                accounts.append({"key": "default", "name": "",
                                  "user_id": old["user_id"], "enabled": True})
         except Exception:
             pass

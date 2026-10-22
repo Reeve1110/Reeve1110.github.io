@@ -1,9 +1,10 @@
-"""Reeve 摄影站 · 桌面管理工具
+"""摄影站 · 桌面管理工具
 
-做三件事：
+做四件事：
   1) 账号：添加 / 登录 / 启用停用（对应 data/accounts.json 与独立 profile）
   2) 作品：勾选哪些文章对外显示（写 works.json 的 hidden），一键抓取新笔记
-  3) 推送：git add / commit / push，推完 GitHub Pages 自动更新
+  3) 刷新：重新拉取已有笔记的内容（发布日期保持首次发布不变）
+  4) 推送：git add / commit / push，推完 GitHub Pages 自动更新
 
 依赖：Python 3.13+（需带 tkinter）、Pillow；运行时用 pythonw.exe 可无黑窗。
 """
@@ -30,7 +31,7 @@ WORKS_JSON = os.path.join(DATA, "works.json")
 ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
 PROFILE_JSON = os.path.join(DATA, "profile.json")
 PROFILES = os.path.join(DATA, "profiles")
-SITE_URL = "https://reeve1110.github.io/"
+SITE_URL = "https://www.frw.fan/"
 
 # 高 DPI 屏下保持字体清晰（必须在创建 Tk 之前设置）
 try:
@@ -74,14 +75,16 @@ def save_json(path, data):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Reeve 摄影站 · 管理工具")
-        self.geometry("1200x820")
-        self.minsize(1000, 700)
-        self.configure(bg=C_BG)
 
         self.works_data = load_json(WORKS_JSON, {"site": {}, "categories": [], "works": []})
         self.accounts_data = load_json(ACCOUNTS_JSON, {"accounts": []})
         self.profile_data = load_json(PROFILE_JSON, {})
+
+        self.title(f"{self.author_name()} · 管理工具")
+        self.geometry("1280x840")
+        self.minsize(1120, 700)
+        self.configure(bg=C_BG)
+
         self.dirty = False
         self.busy = False
         self.q = queue.Queue()
@@ -94,9 +97,15 @@ class App(tk.Tk):
         self.reload_profile()
         self.reload_accounts()
         self.refresh_status()
+        self.log("就绪 · 抓取、刷新、推送的输出都会实时打在右侧这一栏", "dim")
         self.after(120, self._drain_queue)
 
     # ---------------- 样式 ----------------
+
+    def author_name(self):
+        """全站显示名：统一取个人信息里的名字（多个账号都是同一个人）。"""
+        n = ((self.profile_data or {}).get("name") or "").strip()
+        return n or "作者"
 
     def _style(self):
         s = ttk.Style(self)
@@ -140,19 +149,27 @@ class App(tk.Tk):
                                  anchor="e", padx=14, font=("Microsoft YaHei UI", 9))
         self.busy_lbl.pack(side="right")
 
-        # 日志
-        logf = ttk.Frame(self, padding=(14, 6, 14, 4))
-        logf.pack(fill="x", side="bottom")
+        # 外壳：左主体 + 右日志两列（切得干净，谁也不挤谁）
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True)
+
+        # ---- 右列：运行日志，固定宽度、整列撑满 ----
+        logf = ttk.Frame(outer, padding=(14, 10, 14, 12), width=380)
+        logf.pack(side="right", fill="y")
+        logf.pack_propagate(False)
+
         bar = ttk.Frame(logf)
         bar.pack(fill="x")
         ttk.Label(bar, text="运行日志", style="Soft.TLabel").pack(side="left")
         ttk.Button(bar, text="清空", width=6,
                    command=lambda: self.logbox.delete("1.0", "end")).pack(side="right")
+
         wrap = ttk.Frame(logf)
-        wrap.pack(fill="x", pady=(4, 0))
-        self.logbox = tk.Text(wrap, height=6, bg="#faf9f7", fg="#33302c",
+        wrap.pack(fill="both", expand=True, pady=(6, 0))
+        self.logbox = tk.Text(wrap, height=20, width=42, bg="#f4f3f1", fg="#33302c",
                               relief="flat", font=("Consolas", 9),
-                              wrap="word", padx=10, pady=6)
+                              wrap="word", padx=10, pady=8, bd=0,
+                              highlightthickness=0)
         sb = ttk.Scrollbar(wrap, command=self.logbox.yview)
         self.logbox.configure(yscrollcommand=sb.set)
         self.logbox.pack(side="left", fill="both", expand=True)
@@ -161,17 +178,21 @@ class App(tk.Tk):
         self.logbox.tag_configure("warn", foreground=C_WARN)
         self.logbox.tag_configure("dim", foreground=C_SOFT)
 
-        # 头部
-        head = ttk.Frame(self, padding=(18, 14, 18, 6))
+        # ---- 左列：头部 + 标签页 ----
+        left_col = ttk.Frame(outer)
+        left_col.pack(side="left", fill="both", expand=True)
+
+        head = ttk.Frame(left_col, padding=(18, 14, 18, 6))
         head.pack(fill="x")
-        ttk.Label(head, text="Reeve 摄影站", style="Title.TLabel").pack(side="left")
+        self.head_title = ttk.Label(head, text=f"{self.author_name()} 摄影站",
+                                    style="Title.TLabel")
+        self.head_title.pack(side="left")
         ttk.Label(head, text="  管理工具", style="Soft.TLabel").pack(side="left")
         link = ttk.Label(head, text=SITE_URL, foreground="#1a5dc8", cursor="hand2")
         link.pack(side="right")
         link.bind("<Button-1>", lambda e: webbrowser.open(SITE_URL))
 
-        # 主体
-        self.nb = ttk.Notebook(self)
+        self.nb = ttk.Notebook(left_col)
         self.nb.pack(fill="both", expand=True, padx=14, pady=(4, 4))
         self.tab_works = ttk.Frame(self.nb, padding=10)
         self.tab_acc = ttk.Frame(self.nb, padding=10)
@@ -196,8 +217,14 @@ class App(tk.Tk):
         self.btn_push.pack(side="left", padx=(8, 0))
         self.dirty_lbl = ttk.Label(foot, text="", foreground=C_WARN)
         self.dirty_lbl.pack(side="left", padx=(12, 0))
-        ttk.Label(foot, text="推送后 GitHub Pages 约 1 分钟生效",
-                  style="Soft.TLabel").pack(side="right")
+        ttk.Label(foot, text="推送后约 1 分钟生效",
+                  style="Soft.TLabel").pack(side="left", padx=(14, 0))
+        self.btn_fetch = ttk.Button(foot, text="抓取新笔记", style="Accent.TButton",
+                                    command=self.fetch_notes)
+        self.btn_fetch.pack(side="right")
+        self.btn_refresh = ttk.Button(foot, text="刷新笔记状态",
+                                      command=self.refresh_notes)
+        self.btn_refresh.pack(side="right", padx=(0, 8))
 
         bar = ttk.Frame(parent)
         bar.pack(fill="x", pady=(0, 8))
@@ -210,11 +237,8 @@ class App(tk.Tk):
         self.only_off = tk.BooleanVar(value=False)
         ttk.Checkbutton(bar, text="只看已隐藏", variable=self.only_off,
                         command=self.reload_works).pack(side="left", padx=(14, 0))
-        ttk.Label(bar, text="勾选 = 在网站上显示", style="Soft.TLabel").pack(
-            side="left", padx=(14, 0))
-
-        ttk.Button(bar, text="抓取新笔记", style="Accent.TButton",
-                   command=self.fetch_notes).pack(side="right")
+        ttk.Label(bar, text="☑ 显示 / ☐ 隐藏", style="Soft.TLabel").pack(
+            side="left", padx=(12, 0))
 
         body = ttk.Frame(parent)
         body.pack(fill="both", expand=True)
@@ -330,13 +354,18 @@ class App(tk.Tk):
     def save_profile(self):
         bio = self.txt_bio.get("1.0", "end").rstrip()
         data = dict(self.profile_data or {})
-        data["name"] = self.var_name.get().strip() or "Reeve"
+        data["name"] = self.var_name.get().strip() or "翎溯"
         data["role"] = self.var_role.get().strip()
         data["bio"] = bio
         data["bio_source"] = self.var_src.get()
         try:
             save_json(PROFILE_JSON, data)
             self.profile_data = data
+            # 名字是全站唯一作者名，改完同步到标题栏与账号表
+            self.head_title.configure(text=f"{self.author_name()} 摄影站")
+            self.title(f"{self.author_name()} · 管理工具")
+            self.unify_account_names()
+            self.reload_accounts()
             self.log("✓ profile.json 已保存（记得去「作品同步」页推送）", "ok")
         except Exception as e:
             messagebox.showerror("保存失败", str(e))
@@ -430,8 +459,10 @@ class App(tk.Tk):
         self.busy = bool(text)
         self.busy_lbl.configure(text=("⏳ " + text) if text else "")
         state = "disabled" if self.busy else "normal"
-        for b in (self.btn_save, self.btn_push):
-            b.configure(state=state)
+        for name in ("btn_save", "btn_push", "btn_refresh", "btn_fetch"):
+            b = getattr(self, name, None)
+            if b is not None:
+                b.configure(state=state)
         self.update_idletasks()
 
     # ---------------- 作品 ----------------
@@ -527,14 +558,30 @@ class App(tk.Tk):
 
     def reload_accounts(self):
         self.accounts_data = load_json(ACCOUNTS_JSON, {"accounts": []})
+        self.unify_account_names()
         self.acc_tree.delete(*self.acc_tree.get_children())
         for a in self.accounts_data.get("accounts", []):
             self.acc_tree.insert(
                 "", "end", iid=a["key"],
-                values=(a.get("key", ""), a.get("name", ""),
+                values=(a.get("key", ""), self.author_name(),
                         a.get("user_id", "") or "（未登录）",
                         "启用" if a.get("enabled", True) else "已停用"))
         self.refresh_status()
+
+    def unify_account_names(self):
+        """几个账号都是同一个人的，显示名统一用「个人信息」里的名字，不再逐个命名。"""
+        want = self.author_name()
+        changed = False
+        for a in self.accounts_data.get("accounts", []):
+            if a.get("name") != want:
+                a["name"] = want
+                changed = True
+        if changed:
+            try:
+                save_json(ACCOUNTS_JSON, self.accounts_data)
+            except Exception:
+                pass
+        return changed
 
     def _sel_account(self):
         s = self.acc_tree.selection()
@@ -554,12 +601,9 @@ class App(tk.Tk):
         if any(a.get("key") == key for a in self.accounts_data.get("accounts", [])):
             messagebox.showerror("已存在", f"账号 {key} 已经加过了")
             return
-        name = simpledialog.askstring("添加账号", "显示名（会显示在作品详情的作者处）：",
-                                      initialvalue=key, parent=self)
-        if name is None:
-            return
+        # 多个账号都是同一个人的，显示名统一用个人信息里的名字，不再单独询问
         self.accounts_data.setdefault("accounts", []).append(
-            {"key": key, "name": name.strip() or key, "user_id": "", "enabled": True})
+            {"key": key, "name": self.author_name(), "user_id": "", "enabled": True})
         save_json(ACCOUNTS_JSON, self.accounts_data)
         self.reload_accounts()
         self.log(f"已添加账号 {key}，接下来会自动打开浏览器让你扫码", "ok")
@@ -663,6 +707,44 @@ class App(tk.Tk):
             self.log("✓ 抓取完成，列表已刷新", "ok")
         else:
             self.log("✗ 抓取中断，详情见上方日志", "warn")
+
+    def refresh_notes(self):
+        """只更新已有笔记编辑后的内容（标题/正文/图片/标签），
+        发布日期永远保持首次发布时那一天，分类与显示状态也不动。"""
+        accs = [a for a in self.accounts_data.get("accounts", [])
+                if a.get("enabled", True) and a.get("user_id")]
+        if not accs:
+            messagebox.showwarning(
+                "没有可用账号",
+                "先去「账号管理」添加并登录账号，再刷新。")
+            return
+        if self.dirty and not self.save_works(silent=True):
+            return
+
+        names = "\n".join(f"  · {a['key']}" for a in accs)
+        if not messagebox.askyesno(
+                "刷新笔记状态",
+                f"会重新打开每一条已导入的笔记，用最新内容更新：\n"
+                f"  标题 / 正文 / 图片 / 标签\n\n"
+                f"保持不变：\n"
+                f"  · 发布日期（始终是首次发布那天）\n"
+                f"  · 分类、显示或隐藏状态\n\n"
+                f"账号：\n{names}\n\n继续？"):
+            return
+
+        self.set_busy("刷新笔记状态…")
+        self.log("→ 开始刷新已有笔记（内容更新，日期不动）", "warn")
+        script = os.path.join(ROOT, "scripts", "xhs_fetch.py")
+        self.run_cmd([python_exe(), script, "--refresh"], "刷新笔记状态",
+                     on_done=self._after_refresh)
+
+    def _after_refresh(self, ok):
+        self.reload_works()
+        if ok:
+            self.log("✓ 刷新完成：内容已更新，发布日期保持不变", "ok")
+            self.log("   改完记得点「推送更新」让线上生效", "dim")
+        else:
+            self.log("✗ 刷新中断，详情见上方日志", "warn")
 
     # ---------------- 推送 ----------------
 

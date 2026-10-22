@@ -106,13 +106,24 @@ def main():
         # 布局完整性：底部按钮与日志框必须真的可见
         check("保存按钮可见", app.btn_save.winfo_ismapped() == 1)
         check("推送按钮可见", app.btn_push.winfo_ismapped() == 1)
+        check("刷新按钮可见", app.btn_refresh.winfo_ismapped() == 1)
+        check("刷新按钮未被挤压", app.btn_refresh.winfo_width() > 60,
+              f"{app.btn_refresh.winfo_width()}px")
         check("日志区可见", app.logbox.winfo_ismapped() == 1,
               f"{app.logbox.winfo_width()}x{app.logbox.winfo_height()}")
         check("日志区有高度", app.logbox.winfo_height() > 40,
               str(app.logbox.winfo_height()))
+        # 日志必须在窗口右半边，且不覆盖主体
+        lx = app.logbox.winfo_rootx() - app.winfo_rootx()
+        check("日志区在窗口右侧", lx > app.winfo_width() * 0.6,
+              f"x={lx} / 宽 {app.winfo_width()}")
         fh = app.btn_push.winfo_rooty() + app.btn_push.winfo_height()
         wh = app.winfo_rooty() + app.winfo_height()
         check("推送按钮在窗口内", fh <= wh, f"{fh} <= {wh}")
+
+        # 账号显示名统一
+        names = {app.acc_tree.item(i, "values")[1] for i in app.acc_tree.get_children()}
+        check("账号显示名已统一", len(names) <= 1, str(names))
 
         if shot:
             app.update()

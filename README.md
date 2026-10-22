@@ -47,6 +47,7 @@
 python scripts/xhs_login.py --account default          # 首次/掉登录时扫码一次
 python scripts/xhs_fetch.py                            # 所有启用账号：抓元数据 + 下载图片
 python scripts/xhs_fetch.py --account photo            # 只抓某个账号
+python scripts/xhs_fetch.py --refresh                  # 刷新已有笔记的内容（发布日期不变）
 python scripts/xhs_fetch.py --meta-only                # 只抓元数据（最快）
 python scripts/xhs_fetch.py --images-only              # 只补图片（复用已有元数据）
 python scripts/xhs_fetch.py --no-ai                    # 关闭 AI，强制走关键词分类
@@ -57,6 +58,18 @@ python scripts/xhs_fetch.py --no-ai                    # 关闭 AI，强制走�
 - 每抓到一条就落盘 `data/raw/notes_<账号>.json`，中途崩了不会丢进度
 - 跑完会打印分阶段耗时，例如：
   `耗时：打开主页 1.0s · 滚动加载 3.5s · 详情 11 条 5.6s（均 0.51s/条）`
+
+### `--refresh` 刷新笔记状态
+
+笔记在小红书上编辑过（改标题、改正文、换图）后跑这个，**只更新内容，不动发布日期**：
+
+| 更新 | 保持 |
+|---|---|
+| `title` / `caption` / `tags` | `date` / `year`（首次发布那天） |
+| 图片（重新下载，多余的旧图会清掉） | `slug`（图片目录名） |
+| `author`（统一取 `profile.json` 的 `name`） | `category`（人工分类）、`hidden`（显示/隐藏） |
+
+下载失败的图会沿用旧文件，不会把一组图刷成残缺。管理工具里对应「刷新笔记状态」按钮。
 
 ### 速度相关的实现（别乱改）
 
@@ -111,7 +124,7 @@ cp data/ai.example.json data/ai.json
 
 ```json
 {
-  "site": { "title": "Reeve", "subtitle": "记录光与日常。", "authors": ["Reeve"] },
+  "site": { "title": "翎溯", "subtitle": "记录光与日常。", "authors": ["翎溯"] },
   "categories": [{ "key": "pets", "name": "萌宠" }],
   "works": [
     {
@@ -123,7 +136,7 @@ cp data/ai.example.json data/ai.json
       "year": "2026",
       "tags": ["狗", "公园"],
       "category": "pets",
-      "author": "Reeve",
+      "author": "翎溯",
       "source": "",
       "thumb": "images/works/<目录>/01_t.webp",
       "images": [{ "src": "images/works/<目录>/01.webp",
@@ -152,7 +165,7 @@ cp data/ai.example.json data/ai.json
 
 ```json
 {
-  "name": "Reeve",
+  "name": "翎溯",
   "role": "Photography · 摄影",
   "bio": "第一行\n第二行",
   "bio_source": "custom",
