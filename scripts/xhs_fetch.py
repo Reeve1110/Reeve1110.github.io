@@ -28,6 +28,11 @@ from playwright.sync_api import sync_playwright
 from xhs_common import (DATA, ROOT, is_logged_in, launch, load_accounts,
                         save_accounts)
 
+try:
+    import ai_helper            # 可选：AI 辅助分类，缺模块也能正常抓
+except Exception:
+    ai_helper = None
+
 RAW_DIR = os.path.join(DATA, "raw")
 ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
 EXCLUDE_JSON = os.path.join(DATA, "exclude.json")
@@ -266,12 +271,35 @@ DETAIL_JS = """
 DATE_RE = re.compile(r"(20\d{2})-(\d{2})-(\d{2})")
 
 
+def block_heavy(route):
+    """详情页只需要 DOM 与 __INITIAL_STATE__，图片/字体/视频没必要下载。
+    这一层能让每次整页加载少掉几 MB，是提速最主要的一刀。"""
+    try:
+        if route.request.resource_type in ("image", "media", "font"):
+            return route.abort()
+    except Exception:
+        pass
+    return route.continue_()
+
+
 def scrape(page, acc, limit=None, force=False):
     """抓单个账号。acc = {"key","name","user_id"}"""
     account, uid, author = acc["key"], acc["user_id"], acc.get("name") or acc["key"]
     url = f"https://www.xiaohongshu.com/user/profile/{uid}"
-    page.goto(url, wait_until="domcontentloaded")
-    page.wait_for_timeout(4000)
+    t_open = time.time()
+    # 注意：必须用 commit。小红书主页的 DOMContentLoaded 会被拖到 ~28s，
+    # 而 DOM 数据其实 0.5s 就到了，等它纯属浪费。
+    page.goto(url, wait_until="commit")
+    # 固定 sleep 4s 太浪费：登录态一就绪就继续，最多等 6s
+    for _ in range(30):
+        try:
+            if is_logged_in(page) and page.evaluate(
+                    "() => document.querySelectorAll('section.note-item, .note-item').length") > 0:
+                break
+        except Exception:
+            pass
+        page.wait_for_timeout(200)
+    t_ready = time.time()
     if "login" in page.url or not is_logged_in(page):
         print(f"!! [{account}] 登录态无效，跳过该账号"
               f"（先跑 xhs_login.py --account {account}）", flush=True)
@@ -287,31 +315,54 @@ def scrape(page, acc, limit=None, force=False):
         if limit and len(found) >= limit:
             break
         if cnt == last_cnt:
-            stable += 1
-            page.wait_for_timeout(2200)
-            if stable >= 4:
-                break
+            # 不再无脑等 2.2s：先给 240ms，再陆续加到 960ms，仍不增长才算稳定
+            for _ in range(4):
+                page.wait_for_timeout(240)
+                cnt = page.evaluate(SCROLL_JS)
+                if cnt != last_cnt:
+                    break
+            if cnt == last_cnt:
+                stable += 1
+                if stable >= 3:
+                    break
+            else:
+                stable, last_cnt = 0, cnt
         else:
             stable, last_cnt = 0, cnt
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(450)
 
+    t_scan = time.time()
     items = list(found.values())
     n_priv = sum(1 for x in items if x.get("isPrivate"))
     print(f"[{account}] 主页共 {len(items)} 条笔记（私密 {n_priv} 条将被排除）", flush=True)
     if limit:
         items = items[:limit]
 
+    t_scroll = time.time()
     ex = load_exclude()
     notes = [] if force else load_notes(account)
     done = {n["id"] for n in notes}
+    visited = 0
+    t_detail = time.time()
     for i, it in enumerate(items):
         if it["id"] in done:
             continue
+        # 卡片上已能确认「仅自己可见」的，不必再打开详情页（省掉一次整页加载）
+        if it.get("isPrivate"):
+            print(f"  [{i + 1}/{len(items)}] 跳过（仅自己可见）", flush=True)
+            continue
+
+        visited += 1
         print(f"  [{i + 1}/{len(items)}] {it['id']} ...", end=" ", flush=True)
         try:
-            page.goto(it["href"], wait_until="domcontentloaded")
-            page.wait_for_timeout(1900)
-            d = page.evaluate(DETAIL_JS, it["id"])
+            page.goto(it["href"], wait_until="commit")
+            # 固定 sleep 1.9s → 轮询到数据出来就继续（通常 0.3~0.7s）
+            d = {}
+            for _ in range(26):
+                d = page.evaluate(DETAIL_JS, it["id"])
+                if d.get("got") and (d.get("images") or d.get("type")):
+                    break
+                page.wait_for_timeout(120)
         except Exception as e:
             print("打开失败:", str(e)[:90], flush=True)
             continue
@@ -362,6 +413,12 @@ def scrape(page, acc, limit=None, force=False):
         save_notes(account, notes)     # 增量落盘，崩溃不丢进度
         print(f"{len(imgs)} 图 · {date} · {note['title'][:16]}", flush=True)
 
+    if visited:
+        avg = (time.time() - t_detail) / visited
+        print(f"[{account}] 耗时：打开主页 {t_ready - t_open:.1f}s · "
+              f"滚动加载 {t_scan - t_ready:.1f}s · "
+              f"详情 {visited} 条 {time.time() - t_detail:.1f}s（均 {avg:.2f}s/条）",
+              flush=True)
     return notes
 
 
@@ -511,6 +568,26 @@ def build_works(accounts):
                 "hidden": False,
             })
 
+    # ---- AI 辅助：只给本次新增的作品判定分类与标签 ----
+    if USE_AI and ai_helper:
+        fresh = [w for w in works if w["id"] not in old]
+        if fresh:
+            allowed = {k: cat_names[k]
+                       for k in ("pets", "campus", "city", "landscape", "other")}
+            payload = [{"i": i, "title": w.get("title", ""), "desc": w.get("caption", "")}
+                       for i, w in enumerate(fresh)]
+            got = ai_helper.classify_works(payload, allowed)
+            for i, w in enumerate(fresh):
+                r = got.get(i)
+                if not r:
+                    continue
+                w["category"] = r["category"]
+                if r.get("tags"):
+                    merged = list(dict.fromkeys((w.get("tags") or []) + r["tags"]))
+                    w["tags"] = merged[:6]
+            if got:
+                print(f"  [AI] {len(got)} 条新作品已由 AI 分类", flush=True)
+
     works.sort(key=lambda w: (w.get("date") or ""), reverse=True)
 
     order = ["pets", "campus", "city", "landscape", "other"]
@@ -547,7 +624,12 @@ def build_works(accounts):
 
 # ---------------- 主流程 ----------------
 
+USE_AI = True
+
+
 def main():
+    global USE_AI
+    USE_AI = "--no-ai" not in sys.argv
     limit = None
     only_account = None
     for i, a in enumerate(sys.argv):
@@ -575,10 +657,14 @@ def main():
             continue
         ready.append(a)
 
+    if USE_AI and ai_helper:
+        print(f"AI 辅助：{ai_helper.status()}", flush=True)
+
     if not images_only:
         for acc in ready:
             print(f"\n===== 账号 {acc['key']}（{acc.get('name')}）=====", flush=True)
             pw, ctx = launch(headless=True, account=acc["key"])
+            ctx.route("**/*", block_heavy)      # 不下载图片/字体/视频
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
             try:
                 notes = scrape(page, acc, limit, force=force)

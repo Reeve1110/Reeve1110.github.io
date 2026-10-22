@@ -1,6 +1,8 @@
 # 抓取过程的中间产物与本地账号信息：绝不进仓库
 data/*
 !data/works.json
+!data/profile.json
+!data/ai.example.json
 
 # 脚本缓存
 scripts/__pycache__/

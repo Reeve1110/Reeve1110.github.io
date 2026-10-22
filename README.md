@@ -1,205 +1,243 @@
-# Reeve — 摄影作品站
+# 维护手册
 
-个人摄影作品展示站，纯静态，托管于 GitHub Pages。
-线上地址：<https://reeve1110.github.io/>
+仓库里同时放着**页面文件**和**维护脚本**。日常只需要动 `data/` 与 `images/`，
+其余目录除非要改样式或逻辑，一般不用碰。
 
-## 日常维护：双击 `管理工具.bat`
-
-一个桌面小工具，管三件事：
-
-| 标签页 | 能做什么 |
-|---|---|
-| **作品同步** | 列表里勾选哪些文章对外显示（☑ 显示 / ☐ 隐藏），右侧实时预览缩略图；「抓取新笔记」一键同步小红书；「保存修改」「推送更新」直接 commit + push |
-| **账号管理** | 添加账号（自动弹浏览器扫码）、登录 / 重新登录、启用停用、移除 |
-
-勾选后点「保存修改」写入 `data/works.json`，再点「推送更新」，GitHub Pages 约 1 分钟后生效。
-所有命令输出都打在窗口下方的日志里。
-
-> 需要 Python 3.13+（带 tkinter）与 Pillow。脚本里默认用 `D:\tool\Python\Python314`，
-> 换机器时改一下 `管理工具.bat` 里的 `PY` 路径即可。
-
-## 技术形态
-
-- 纯 HTML / CSS / JavaScript，无构建步骤、无后端、无第三方依赖
-- 单一数据源：`data/works.json`
-- 打开 `index.html` 即可运行（建议用本地服务器，见下）
+## 目录
 
 ```
 .
-├── index.html              页面结构（一般不用改）
-├── 管理工具.bat            双击启动桌面管理工具
+├── index.html              页面骨架
+├── 管理工具.bat            双击启动桌面管理工具（无控制台窗口）
 ├── assets/
 │   ├── css/style.css       样式
-│   └── js/app.js           渲染逻辑：网格 / 分类 / 详情
+│   ├── js/app.js           渲染逻辑
+│   ├── fonts/              思源黑体子集（woff2）
+│   └── img/                头像与二维码素材
 ├── data/
-│   └── works.json          ★ 作品数据，唯一需要维护的文件
-├── images/
-│   └── works/<作品目录>/    作品图片
-└── scripts/                管理工具 + 小红书导入 + 自测脚本（不参与页面运行）
+│   ├── works.json          ★ 作品数据（进仓库）
+│   ├── profile.json        ★ 名字 / 签名 / 二维码（进仓库）
+│   ├── ai.json             AI 配置（**不进仓库**，含 key；模板见 ai.example.json）
+│   └── ...                 账号、登录态、抓取缓存（**不进仓库**）
+├── images/works/           作品图片
+└── scripts/                抓取、同步、自测、发布门禁
 ```
 
-## 新增一组作品
+## 环境
 
-只需两步，**不需要改任何页面代码**。
+- Python 3.13+（要带 tkinter 与 Pillow），本机用 `D:\tool\Python\Python314`
+- 依赖：`pillow`、`playwright`（抓取用）、`fonttools` + `brotli`（重做字体子集用）
+- 换机器时改一下 `管理工具.bat` 里的 `PY` 路径
 
-**1. 放图片**
+## 管理工具
 
-在 `images/works/` 下新建一个目录，例如 `images/works/2026-11-02-厦门/`，
-把图片放进去（建议命名 `01.webp`、`02.webp`…，长边 1600px 左右，宽高比保持原样）。
+双击 `管理工具.bat`，三个标签页：
 
-**2. 追加一条数据**
+| 标签页 | 用途 |
+|---|---|
+| **作品同步** | 勾选哪些作品对外显示；「抓取新笔记」增量同步；「保存修改」「推送更新」 |
+| **个人信息** | 名字、小标题、个性签名（自定义 / 同步小红书）、AI 接口配置 |
+| **账号管理** | 添加账号并扫码登录、启用停用、移除、清除登录态 |
 
-在 `data/works.json` 的 `works` 数组**最前面**加一个对象：
+耗时操作都在后台线程执行，输出实时打在窗口下方的日志区。
+
+## 抓取笔记
+
+```bash
+python scripts/xhs_login.py --account default          # 首次/掉登录时扫码一次
+python scripts/xhs_fetch.py                            # 所有启用账号：抓元数据 + 下载图片
+python scripts/xhs_fetch.py --account photo            # 只抓某个账号
+python scripts/xhs_fetch.py --meta-only                # 只抓元数据（最快）
+python scripts/xhs_fetch.py --images-only              # 只补图片（复用已有元数据）
+python scripts/xhs_fetch.py --no-ai                    # 关闭 AI，强制走关键词分类
+```
+
+- 只抓公开笔记：卡片上标记「仅自己可见」的直接跳过，视频也跳过
+- 增量：已有笔记按 ID 跳过，可反复运行；**手工改过的 `title` / `category` / `hidden` 不会被覆盖**
+- 每抓到一条就落盘 `data/raw/notes_<账号>.json`，中途崩了不会丢进度
+- 跑完会打印分阶段耗时，例如：
+  `耗时：打开主页 1.0s · 滚动加载 3.5s · 详情 11 条 5.6s（均 0.51s/条）`
+
+### 速度相关的实现（别乱改）
+
+| 做法 | 原因 |
+|---|---|
+| `page.goto(..., wait_until="commit")` | 小红书主页的 `DOMContentLoaded` 会被拖到 **≈28s**，而 DOM 0.5s 就到了；改成 commit 后自己轮询就绪 |
+| 图片/字体/视频请求全部 abort | 只需要 DOM 与 `__INITIAL_STATE__`，没必要下载几 MB 图片 |
+| 轮询代替固定 sleep | 详情页就绪通常 0.3~0.7s，原来固定等 1.9s |
+| 私密笔记在列表阶段就跳过 | 省掉一整次页面加载 |
+| 滚动：数量不再增长才判定到底 | 虚拟列表会回收节点，只按数量判断会误停 |
+
+## AI 辅助分类（可选）
+
+默认接 DeepSeek，也预留了任意 OpenAI 兼容服务商。
+
+配置：仓库里只带一份空模板 `data/ai.example.json`，复制成 `data/ai.json` 再填 key（`ai.json` **不进仓库**）：
+
+```bash
+cp data/ai.example.json data/ai.json
+```
+
+`data/ai.json` 各字段：
 
 ```json
 {
-  "id": "2026-11-02-xiamen",
-  "slug": "2026-11-02-厦门",
-  "title": "厦门三日",
-  "caption": "海风把云吹得很低。\n第二天下午下了雨。",
-  "date": "2026-11-02",
-  "year": "2026",
-  "tags": ["海", "胶片"],
-  "category": "2026",
-  "source": "",
-  "thumb": "images/works/2026-11-02-厦门/01.webp",
-  "images": [
-    { "src": "images/works/2026-11-02-厦门/01.webp",
-      "thumb": "images/works/2026-11-02-厦门/01_t.webp",
-      "w": 1600, "h": 2133 },
-    { "src": "images/works/2026-11-02-厦门/02.webp",
-      "thumb": "images/works/2026-11-02-厦门/02_t.webp",
-      "w": 1600, "h": 1067 }
+  "enabled": true,
+  "provider": "deepseek",
+  "base_url": "https://api.deepseek.com",
+  "model": "deepseek-chat",
+  "api_key": "填你自己的 key",
+  "timeout": 30,
+  "batch_size": 12,
+  "custom": {
+    "name": "",
+    "base_url": "",
+    "model": "",
+    "api_key": ""
+  }
+}
+```
+
+- `provider` 填 `custom` 时，改用 `custom` 里的四个字段（默认全部留空，需要时再填）
+- key 也可以走环境变量：`DEEPSEEK_API_KEY` / `AI_API_KEY`（优先级最高）
+- 只给**新增作品**判定 `category` 与 `tags`，不改标题与正文
+- 一批最多 `batch_size` 条塞进一次请求，14 条笔记通常 1~2 次请求
+- 没填 key、超时、401、网络失败 → 静默回落关键词规则，抓取照常完成
+- 关掉：`"enabled": false` 或命令行加 `--no-ai`
+
+## 数据格式
+
+### `data/works.json`
+
+```json
+{
+  "site": { "title": "Reeve", "subtitle": "记录光与日常。", "authors": ["Reeve"] },
+  "categories": [{ "key": "pets", "name": "萌宠" }],
+  "works": [
+    {
+      "id": "6a110c550000000008032756",
+      "slug": "2026-10-06-小狗当然要出去撒欢啦",
+      "title": "小狗当然要出去撒欢啦",
+      "caption": "正文……",
+      "date": "2026-10-06",
+      "year": "2026",
+      "tags": ["狗", "公园"],
+      "category": "pets",
+      "author": "Reeve",
+      "source": "",
+      "thumb": "images/works/<目录>/01_t.webp",
+      "images": [{ "src": "images/works/<目录>/01.webp",
+                   "thumb": "images/works/<目录>/01_t.webp",
+                   "w": 1600, "h": 2133 }],
+      "hidden": false
+    }
   ]
 }
 ```
 
-字段说明：
-
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `id` | 是 | 唯一标识，用于详情页链接 `#/work/<id>` |
-| `title` | 是 | 作品标题 |
+| `id` | 是 | 唯一标识，详情链接为 `#/work/<id>` |
+| `title` | 是 | 标题 |
 | `caption` | 否 | 正文，`\n` 换行 |
 | `date` | 是 | `YYYY-MM-DD`，列表按它倒序 |
-| `category` | 是 | 分类 key，需与 `categories` 中某项对应 |
-| `thumb` | 是 | 列表封面（取第一张的 `_t` 缩略图即可） |
-| `images` | 是 | 图片数组，`w`/`h` 为像素尺寸（用于瀑布流排版，必填） |
-| `hidden` | 否 | `true` 时不在站点显示（图片仍保留），默认 `false` |
-| `author` | 否 | 作者/账号名，多账号时在详情页显示 |
+| `category` | 是 | 需与 `categories` 里的 `key` 对应 |
+| `thumb` | 是 | 列表封面 |
+| `images[].w/h` | 是 | 像素尺寸，排版依赖它，不能缺 |
+| `hidden` | 否 | `true` 时不在页面出现（图片仍保留） |
+| `author` | 否 | 多账号时在详情页显示 |
 | `tags` / `source` / `slug` | 否 | 备注、原文链接、目录名 |
 
-**分类**：在 `categories` 里登记，`key` 供数据引用，`name` 是显示名：
-
-```json
-"categories": [
-  { "key": "2026", "name": "2026 年" },
-  { "key": "street", "name": "街头" }
-]
-```
-
-`category` 只要在 `works` 里出现而 `categories` 未登记，也会自动按 key 显示。
-
-**缩略图**：`w ≤ 720` 的 webp，用于列表首屏加速；没有的话把 `thumb` 指向原图也能用，只是加载慢些。
-
-## 本地预览
-
-```bash
-python -m http.server 8000
-# 打开 http://127.0.0.1:8000/
-```
-
-直接双击 `index.html` 会因浏览器跨域策略读不到 `works.json`，必须走本地服务器。
-
-## 页面特性
-
-- 瀑布流按图片原始宽高比排版，不裁切
-- 分类筛选、作品详情覆盖层（`Esc` 关闭、`←/→` 切图、手机左右滑动）
-- 深浅色主题，跟随系统，可手动切换并记忆
-- 移动端 2 列 / 桌面 3–5 列自适应
-- 详情页链接可直接分享（`#/work/<id>`）
-
-## 部署
-
-仓库 `Reeve1110/Reeve1110.github.io`，推送到 `main` 分支即自动发布：
-
-```bash
-git add -A
-git commit -m "新增：厦门三日"
-git push
-```
-
-## 数据来源
-
-初始作品由本人小红书公开笔记导入（`scripts/xhs_fetch.py`），
-图片版权归作者所有。
-
-## 从小红书导入（可选）
-
-脚本用独立浏览器 profile 保存登录态，**只抓公开笔记**：私密（仅自己可见）与视频自动跳过。
-
-```bash
-python scripts/xhs_login.py                 # 登录默认账号（扫码一次）
-python scripts/xhs_fetch.py                 # 抓取 + 下载图片 + 生成 works.json
-```
-
-- 已有作品按笔记 ID 跳过，可反复运行做增量同步
-- **手工改过的条目不会被覆盖**：`title` / `category` / `hidden` 都以 `works.json` 里现值为准
-- `data/accounts.json`、`data/profiles/`、`data/exclude.json` 都在 `.gitignore` 内，不会进仓库
-
-### 两个（或多个）账号
-
-每个账号有独立登录态，互不干扰：
-
-```bash
-python scripts/xhs_login.py --account photo --name "小号"   # 第二个账号登录一次
-python scripts/xhs_fetch.py                                # 之后默认同步所有 enabled 账号
-python scripts/xhs_fetch.py --account photo                # 只同步某一个
-```
-
-账号表 `data/accounts.json`：
-
-```json
-{ "accounts": [
-  { "key": "default", "name": "Reeve", "user_id": "625fb...", "enabled": true },
-  { "key": "photo",   "name": "小号",   "user_id": "69xxx...", "enabled": true }
-]}
-```
-
-把 `enabled` 改 `false` 即可整体停用某个账号。两个账号的作品会混排在同一条时间线上，
-作品详情页的作者名只在存在多个账号时显示。
-
-### 某些笔记不想同步
-
-两层机制，按需求选：
-
-**① 永久排除（不下载、不进数据）** — 编辑 `data/exclude.json`：
+### `data/profile.json`
 
 ```json
 {
-  "ids": ["68a2fa63000000001c007770"],
-  "title_keywords": ["领养", "宿舍", "考试"]
+  "name": "Reeve",
+  "role": "Photography · 摄影",
+  "bio": "第一行\n第二行",
+  "bio_source": "custom",
+  "avatar": "assets/img/avatar.png",
+  "links": [
+    { "key": "xiaohongshu", "label": "小红书", "qr": "assets/img/qr-xiaohongshu.png" },
+    { "key": "douyin", "label": "抖音", "qr": "assets/img/qr-douyin.png" }
+  ]
 }
 ```
 
-`ids` 是笔记链接里 `/explore/<这一串>`；`title_keywords` 命中标题或正文就排除。
-改完重跑 `xhs_fetch.py`。已经导入过的，还要从 `works.json` 里删掉那一条。
+- `bio_source`：`custom` 用这里写的 `bio`；`xiaohongshu` 每次同步都用小红书简介覆盖
+- `bio` 里的换行会原样显示
+- `avatar` / `links[].qr` 只允许 `assets/` 或 `images/` 开头的站内路径
 
-**② 临时隐藏（图还在，只是不显示）** — 在 `data/works.json` 对应作品里加一行：
+同步小红书简介：
 
-```json
-{ "id": "...", "title": "...", "hidden": true }
+```bash
+python scripts/sync_profile.py                 # 用 bio_source=xiaohongshu 时才写入
+python scripts/sync_profile.py --dry-run       # 只看抓到的内容
 ```
 
-改完刷新页面即可，随时改回 `false` 恢复。
+## 多账号
 
-**③ 彻底不要** — 直接删掉 `works.json` 里的条目和 `images/works/<目录>/`。
+每个账号一个独立浏览器 profile，互不影响：
+
+```bash
+python scripts/xhs_login.py --account photo --name "小号"
+python scripts/xhs_fetch.py                    # 默认同步所有 enabled 账号
+```
+
+`data/accounts.json` 里把 `enabled` 改成 `false` 即整体停用。
+
+## 排除 / 隐藏
+
+| 需要 | 做法 |
+|---|---|
+| 不下载、不进数据 | `data/exclude.json` 里写 `ids` 或 `title_keywords` |
+| 图留着但不展示 | `works.json` 里该条加 `"hidden": true`（管理工具勾选框就是改这个） |
+| 彻底不要 | 删 `works.json` 的条目 + 删对应 `images/works/<目录>/` |
+
+## 发布
+
+```bash
+python scripts/guard_public.py     # 发布前门禁，必须通过
+git add -A && git commit -m "同步：<说明>" && git push
+```
+
+`guard_public.py` 会检查对外文件里有没有手机号、身份证、邮箱、11 位以上连续数字
+（账号/订单号）、敏感字段名，以及 `data/` 是否只跟踪了 `works.json` 与 `profile.json`、
+`assets/img` 的图片是否已剥离 EXIF。任何一条命中都会以非零码退出。
+
+## 字体
+
+页面用思源黑体（Source Han Sans CN），按实际用字裁剪后自托管在 `assets/fonts/`：
+
+```bash
+python scripts/build_font_subset.py            # 重新生成 shs-400 / shs-500
+```
+
+- 需要本机装有 `SourceHanSansCN-Light/Regular/Medium.otf`
+- 新增作品带来了新汉字时，重跑一次即可把缺字补进去
+- 没跑也没关系：缺字会回落到系统里的思源黑体或微软雅黑，不会出现方块
+
+## 素材
+
+`scripts/make_brand_assets.py` 从 `data/brand-src/` 的原图生成头像与二维码，
+**只抠图形本体**（不包含原卡片上的昵称、小红书号、抖音号等文字），
+并重新编码为 PNG 以剥离 EXIF / GPS。
+
+```bash
+python scripts/make_brand_assets.py --preview
+```
 
 ## 自测
 
 ```bash
 python -m http.server 8765          # 另开一个终端
-python scripts/test_site.py         # 页面：桌面 / 手机 / 平板三档，截图存 data/shots/
-python scripts/test_site.py --url https://reeve1110.github.io/   # 直接测线上
-python scripts/test_gui.py --shot   # 管理工具：控件、勾选、布局、截图
+python scripts/test_site.py         # 页面三档视口 + 首屏 + 敏感信息断言，截图存 data/shots/
+python scripts/test_site.py --url https://reeve1110.github.io/
+python scripts/test_gui.py --shot   # 管理工具控件与布局
 ```
+
+## 隐私约定
+
+- `data/` 下除 `works.json`、`profile.json` 外**一律不进仓库**：账号 ID、登录态、AI key 都只在本地
+- 页面上不渲染任何账号 ID / 手机号 / 邮箱；二维码素材在生成时就裁掉了这些文字
+- `profile.json` 的字段是白名单，多余字段会被门禁拦下
