@@ -259,6 +259,8 @@ class App(tk.Tk):
                    command=self.login_account).pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="启用 / 停用",
                    command=self.toggle_account).pack(side="left", padx=(6, 0))
+        ttk.Button(bar, text="清除登录态",
+                   command=self.reset_login).pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="移除账号", command=self.remove_account).pack(side="left", padx=(6, 0))
         ttk.Label(bar, text="每个账号独立登录态，互不影响",
                   style="Soft.TLabel").pack(side="left", padx=(14, 0))
@@ -466,6 +468,27 @@ class App(tk.Tk):
                 break
         save_json(ACCOUNTS_JSON, self.accounts_data)
         self.reload_accounts()
+
+    def reset_login(self):
+        """删掉该账号的本机登录态，下次登录会重新出二维码（用于换号）。"""
+        key = self._sel_account()
+        if not key:
+            return
+        if not messagebox.askyesno(
+                "清除登录态",
+                f"将删除账号 {key} 在本机保存的登录态（浏览器数据），\n"
+                f"已导入的作品不受影响。\n\n之后点「登录 / 重新登录」会重新出二维码。继续？"):
+            return
+        prof = os.path.join(PROFILES, key)
+        import shutil
+        shutil.rmtree(prof, ignore_errors=True)
+        for a in self.accounts_data.get("accounts", []):
+            if a.get("key") == key:
+                a["user_id"] = ""
+                break
+        save_json(ACCOUNTS_JSON, self.accounts_data)
+        self.reload_accounts()
+        self.log(f"已清除 {key} 的登录态，现在可以重新登录（换号）", "ok")
 
     def remove_account(self):
         key = self._sel_account()

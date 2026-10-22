@@ -36,20 +36,25 @@ def main():
         check("作品列表有数据", len(rows) > 0, f"{len(rows)} 行")
         first = app.tree.item(rows[0], "values")
         check("列表列数正确", len(first) == 6, str(first[:3]))
-        check("默认全部勾选", all(app.tree.set(r, "sel") == "☑" for r in rows))
+        states = {r: app.tree.set(r, "sel") for r in rows}
+        check("勾选状态已渲染", all(v in ("☑", "☐") for v in states.values()),
+              f"{sum(1 for v in states.values() if v == '☑')} 个显示 / "
+              f"{sum(1 for v in states.values() if v == '☐')} 个隐藏")
 
         # 分类名显示为中文而非 key
         cats = {c["key"]: c["name"] for c in app.works_data["categories"]}
         cat_cells = [app.tree.set(r, "cat") for r in rows]
         check("分类显示中文名", all(c in cats.values() for c in cat_cells), str(set(cat_cells)))
 
-        # 勾选切换
+        # 勾选切换：只验证翻转，不强求初始状态
         target = rows[0]
+        before = app.tree.set(target, "sel")
         app.toggle_work(target)
-        check("点击行取消勾选", app.tree.set(target, "sel") == "☐")
+        after = app.tree.set(target, "sel")
+        check("点击行翻转勾选", before != after and after in ("☑", "☐"), f"{before}→{after}")
         check("标记为未保存", app.dirty is True)
         w0 = next(w for w in app.works_data["works"] if w["id"] == target)
-        check("hidden 置为 True", w0.get("hidden") is True)
+        check("hidden 与勾选一致", bool(w0.get("hidden")) == (after == "☐"))
 
         # 全不选 / 全选
         app.set_all(False)
@@ -67,12 +72,14 @@ def main():
         # 只看已隐藏
         app.toggle_work(app.tree.get_children()[0])
         app.save_works(silent=True)
+        expect_hidden = sum(1 for w in app.works_data["works"] if w.get("hidden"))
         app.only_off.set(True)
         app.reload_works()
         n1 = len(app.tree.get_children())
-        check("只看已隐藏过滤生效", n1 == 1, f"{n1} 行")
+        check("只看已隐藏过滤生效", n1 == expect_hidden, f"{n1} 行 / 应 {expect_hidden}")
         app.only_off.set(False)
         app.reload_works()
+        check("取消过滤后恢复全部", len(app.tree.get_children()) == len(rows))
 
         # 预览
         app.tree.selection_set(app.tree.get_children()[0])

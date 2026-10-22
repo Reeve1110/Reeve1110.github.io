@@ -25,7 +25,8 @@ import time
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-from xhs_common import DATA, ROOT, launch, load_accounts, save_accounts
+from xhs_common import (DATA, ROOT, is_logged_in, launch, load_accounts,
+                        save_accounts)
 
 RAW_DIR = os.path.join(DATA, "raw")
 ACCOUNTS_JSON = os.path.join(DATA, "accounts.json")
@@ -271,9 +272,9 @@ def scrape(page, acc, limit=None, force=False):
     url = f"https://www.xiaohongshu.com/user/profile/{uid}"
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_timeout(4000)
-    if "login" in page.url:
-        print(f"!! [{account}] 未登录，跳过该账号（先跑 xhs_login.py --account {account}）",
-              flush=True)
+    if "login" in page.url or not is_logged_in(page):
+        print(f"!! [{account}] 登录态无效，跳过该账号"
+              f"（先跑 xhs_login.py --account {account}）", flush=True)
         return load_notes(account)
 
     # 边滚边累积：虚拟列表会回收节点，只取最后一屏会漏

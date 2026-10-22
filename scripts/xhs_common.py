@@ -95,6 +95,72 @@ def prepare_profile(account="default", force=False):
     return prof
 
 
+# 真实登录态判定。注意两点：
+#   1) web_session cookie 游客态也会下发，不能拿它判断；
+#   2) state 里的 userInfo / loggedIn 是 Vue ref，必须解包 .value 才能读到内容
+#      （不解包会永远读到空对象，进而导致「以为没登录 → 反复刷新页面」）。
+IS_LOGGED_IN_JS = """() => {
+  const unref = v => (v && v.__v_isRef) ? v.value : v;
+  try {
+    const st = window.__INITIAL_STATE__;
+    const u = st && st.user;
+    if (!u) return false;
+    const li = unref(u.loggedIn);
+    const ui = unref(u.userInfo);
+    if (li === true && ui && (ui.userId || ui.user_id)) return true;
+    if (ui && (ui.userId || ui.user_id) && (ui.nickname || ui.nickName)) return true;
+  } catch (e) {}
+  try {
+    const txt = document.body ? (document.body.innerText || '') : '';
+    if (txt.indexOf('发布笔记') > -1) return true;
+  } catch (e) {}
+  return false;
+}"""
+
+
+def is_logged_in(page):
+    """页面是否处于已登录状态。切勿用 cookie 判断——游客也有 web_session。"""
+    try:
+        return bool(page.evaluate(IS_LOGGED_IN_JS))
+    except Exception:
+        return False
+
+
+def get_current_user(page):
+    """返回 (userId, nickname)；未登录返回 ('', '')。"""
+    try:
+        return page.evaluate(
+            """() => {
+            const unref = v => (v && v.__v_isRef) ? v.value : v;
+            try {
+                const u = window.__INITIAL_STATE__ && window.__INITIAL_STATE__.user;
+                const ui = unref(u && u.userInfo);
+                if (ui) return [String(ui.userId || ui.user_id || ''),
+                                String(ui.nickname || ui.nickName || '')];
+            } catch (e) {}
+            return ['', ''];
+        }"""
+        )
+    except Exception:
+        return ("", "")
+
+
+def open_login_panel(page):
+    """已登录之外的场景：把二维码浮层点出来（比直接跳 /login 稳，不会把页面刷走）。"""
+    clicked = page.evaluate(
+        """() => {
+        const cands = [...document.querySelectorAll('button, div, span, a')]
+          .filter(e => (e.innerText || '').trim() === '登录' && e.offsetParent !== null);
+        if (!cands.length) return false;
+        cands[cands.length - 1].click();
+        return true;
+    }"""
+    )
+    if clicked:
+        page.wait_for_timeout(1200)
+    return clicked
+
+
 def launch(headless=False, force_copy=False, account="default"):
     prof = prepare_profile(account, force=force_copy)
     pw = sync_playwright().start()
