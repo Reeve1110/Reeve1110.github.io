@@ -90,6 +90,12 @@ def hero_checks(page, label):
         "() => { const l = document.querySelector('link[rel=canonical]'); return l ? l.href : ''; }")
     check(f"{label} canonical 指向主域名",
           canon.rstrip("/") == "https://www.frw.fan", canon)
+
+    # Search Console 验证标记：删了会导致资源掉验证，必须有
+    verify = page.evaluate(
+        "() => { const m = document.querySelector('meta[name=google-site-verification]');"
+        " return m ? m.content : ''; }")
+    check(f"{label} 保留 Search Console 验证标记", len(verify) > 20, verify[:18] + "…")
     av = page.evaluate(
         "() => { const a = document.getElementById('heroAvatar');"
         " return a.hidden ? 0 : a.naturalWidth; }")
