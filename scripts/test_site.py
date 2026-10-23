@@ -132,6 +132,22 @@ def hero_checks(page, label):
           bool(card) and len(card["labels"]) == 2 and all(card["labels"]),
           str((card or {}).get("labels")))
 
+    # 二维码可点击直接跳转：tile 是 <a>，https 外链，新窗口 + noopener
+    qlink = page.evaluate(
+        """() => [...document.querySelectorAll('.qr-tile')].map(t => ({
+          tag: t.tagName.toLowerCase(),
+          href: t.getAttribute('href') || '',
+          target: t.getAttribute('target') || '',
+          rel: t.getAttribute('rel') || '',
+        }))""")
+    check(f"{label} 二维码可点击跳转",
+          len(qlink) == 2 and all(x["tag"] == "a" and x["href"].startswith("https://")
+                                  for x in qlink),
+          str([(x["tag"], x["href"][:30]) for x in qlink]))
+    check(f"{label} 外链新窗口打开且带 noopener",
+          all(x["target"] == "_blank" and "noopener" in x["rel"] for x in qlink),
+          str([(x["target"], x["rel"]) for x in qlink]))
+
     check(f"{label} 首屏内头部透明",
           page.evaluate("() => document.getElementById('siteHeader')"
                         ".classList.contains('is-over-hero')"))

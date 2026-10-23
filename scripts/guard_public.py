@@ -112,9 +112,12 @@ def check_profile_shape():
     if extra:
         fail(f"profile.json 含未知字段：{sorted(extra)}")
     for l in data.get("links", []):
-        extra = set(l) - {"key", "label", "qr"}
+        extra = set(l) - {"key", "label", "qr", "url"}
         if extra:
             fail(f"profile.json links 含未知字段：{sorted(extra)}")
+        u = (l.get("url") or "").strip()
+        if u and not re.match(r"^https?://", u, re.I):
+            fail(f"profile.json 的 {l.get('key')} 链接不是 http(s)：{u[:40]}")
     print(f"  ✓ profile.json 字段收敛在 {sorted(allowed_root)}")
 
 

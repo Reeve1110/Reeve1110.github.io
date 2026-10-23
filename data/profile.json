@@ -8,12 +8,14 @@
     {
       "key": "xiaohongshu",
       "label": "小红书",
-      "qr": "assets/img/qr-xiaohongshu.png"
+      "qr": "assets/img/qr-xiaohongshu.png",
+      "url": "https://xhslink.cn/o/74PyQPr6vQO"
     },
     {
       "key": "douyin",
       "label": "抖音",
-      "qr": "assets/img/qr-douyin.png"
+      "qr": "assets/img/qr-douyin.png",
+      "url": "https://v.douyin.com/YNTyU4uwzJY/"
     }
   ]
 }

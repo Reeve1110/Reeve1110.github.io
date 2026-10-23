@@ -423,7 +423,14 @@ main { display: block; }
 
 .qr-row { display: flex; gap: 12px; justify-content: center; }
 
-.qr-tile { width: 128px; }
+/* 配了链接时这里是 <a>，要显式 block 才能吃到宽度 */
+.qr-tile { display: block; width: 128px; }
+
+.qr-tile:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, .75);
+  outline-offset: 4px;
+  border-radius: 16px;
+}
 
 .qr-frame {
   display: grid;

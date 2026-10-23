@@ -347,10 +347,14 @@ class App(tk.Tk):
         self.var_src.set(p.get("bio_source", "custom"))
         self.txt_bio.delete("1.0", "end")
         self.txt_bio.insert("1.0", p.get("bio", ""))
-        links = "、".join(l.get("label", "") for l in p.get("links", []))
+        rows = []
+        for l in p.get("links", []):
+            rows.append(f"    {l.get('label', '')} → {l.get('url') or '（点不动，未设链接）'}")
         self.lbl_assets.configure(
-            text=f"头像：{p.get('avatar', '（未设置）')}    二维码：{links or '（未设置）'}\n"
-                 f"图片在 assets/img/，换图直接覆盖同名文件即可")
+            text=f"头像：{p.get('avatar', '（未设置）')}\n"
+                 f"二维码：\n" + ("\n".join(rows) if rows else "    （未设置）") + "\n"
+                 f"图片在 assets/img/，换图直接覆盖同名文件即可；"
+                 f"二维码的跳转链接在 data/profile.json 的 links[].url")
 
     def save_profile(self):
         bio = self.txt_bio.get("1.0", "end").rstrip()

@@ -171,6 +171,12 @@
     return (typeof p === 'string' && /^(assets|images)\//.test(p)) ? p : '';
   }
 
+  // 外链只放行 http(s)：防 javascript: / data: 之类被写进 profile.json
+  function safeUrl(u) {
+    var s = typeof u === 'string' ? u.trim() : '';
+    return /^https?:\/\/[^\s]+$/i.test(s) ? s : '';
+  }
+
   function latestWork() {
     for (var i = 0; i < state.works.length; i++) {
       var im = state.works[i].images && state.works[i].images[0];
@@ -246,11 +252,17 @@
       if (!qr) return;                    // 路径不合法直接跳过
       var key = String(l.key || '').replace(/[^a-z0-9-]/gi, '');
       var label = String(l.label || '').slice(0, 12);
-      html += '<div class="qr-tile"' + (key ? ' data-key="' + key + '"' : '') + '>' +
+      var href = safeUrl(l.url);          // 配了链接就整块可点，没配就只是图片
+      var tag = href ? 'a' : 'div';
+      var attrs = key ? ' data-key="' + key + '"' : '';
+      if (href) {
+        attrs += ' href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"';
+      }
+      html += '<' + tag + ' class="qr-tile"' + attrs + '>' +
         '<span class="qr-frame"><img src="' + esc(qr) + '" alt="' + esc(label) +
         '二维码" width="128" height="128" loading="eager" decoding="async"></span>' +
         '<span class="qr-label">' + esc(label) + '</span>' +
-        '</div>';
+        '</' + tag + '>';
     });
     if (!html) return;
     el.qrRow.innerHTML = html;
