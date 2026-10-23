@@ -1,11 +1,13 @@
-# 抓取过程的中间产物与本地账号信息：绝不进仓库
+# 数据：只公开作品与个人信息
 data/*
 !data/works.json
 !data/profile.json
-!data/ai.example.json
 
-# 脚本缓存
-scripts/__pycache__/
+# 抓取 / 管理工具只在本机使用，不上传
+scripts/
+管理工具.bat
+
+# 缓存
 __pycache__/
 *.pyc
 

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.frw.fan/sitemap.xml
+Sitemap: https://frw.fan/sitemap.xml
