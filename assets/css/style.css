@@ -409,10 +409,10 @@ main { display: block; }
   box-shadow: 0 0 0 3px rgba(143, 224, 172, .18);
 }
 
-/* 层 2 右侧：二维码玻璃卡 */
+/* 层 2 右侧：二维码玻璃卡（只有二维码本体 + 平台名，没有提示文案） */
 .hero-connect {
   justify-self: end;
-  padding: 16px 16px 14px;
+  padding: 14px;
   border-radius: 20px;
   background: rgba(12, 11, 10, .46);
   border: 1px solid rgba(255, 255, 255, .22);
@@ -421,15 +421,7 @@ main { display: block; }
   box-shadow: 0 26px 70px rgba(0, 0, 0, .5);
 }
 
-.connect-title {
-  margin: 0 0 12px;
-  font-size: 11px;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .6);
-}
-
-.qr-row { display: flex; gap: 12px; }
+.qr-row { display: flex; gap: 12px; justify-content: center; }
 
 .qr-tile { width: 128px; }
 
@@ -461,14 +453,6 @@ main { display: block; }
   font-size: 12px;
   letter-spacing: .06em;
   color: rgba(255, 255, 255, .8);
-}
-
-.connect-note {
-  margin: 10px 0 0;
-  text-align: center;
-  font-size: 10.5px;
-  letter-spacing: .04em;
-  color: rgba(255, 255, 255, .55);
 }
 
 .hero-connect[hidden],
@@ -835,7 +819,6 @@ main { display: block; }
   .qr-frame { width: 96px; height: 96px; padding: 7px; border-radius: 12px; }
   .qr-tile { width: 96px; }
   .qr-label { font-size: 11px; margin-top: 7px; }
-  .connect-note { display: none; }
 
   .gallery-head { padding: 22px 0 18px; margin-bottom: 20px; }
   .section-title { font-size: 22px; }

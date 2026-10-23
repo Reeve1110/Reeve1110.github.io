@@ -115,6 +115,23 @@ def hero_checks(page, label):
           str([q["bottom"] for q in qr]))
     check(f"{label} 二维码尺寸可扫描", all(q["w"] >= 80 for q in qr), str([q["w"] for q in qr]))
 
+    # 卡片里只留二维码本体 + 平台名，不再有「扫码找到我 / 手机相机或…」这类提示
+    card = page.evaluate(
+        """() => {
+        const a = document.getElementById('heroConnect');
+        if (!a) return null;
+        return {
+          text: (a.innerText || '').replace(/\\s+/g, ' ').trim(),
+          labels: [...a.querySelectorAll('.qr-label')].map(e => e.innerText.trim()),
+        };
+    }""")
+    check(f"{label} 二维码卡片无提示文案",
+          bool(card) and "扫码找到我" not in card["text"] and "扫一扫" not in card["text"],
+          (card or {}).get("text", ""))
+    check(f"{label} 保留平台名说明",
+          bool(card) and len(card["labels"]) == 2 and all(card["labels"]),
+          str((card or {}).get("labels")))
+
     check(f"{label} 首屏内头部透明",
           page.evaluate("() => document.getElementById('siteHeader')"
                         ".classList.contains('is-over-hero')"))
