@@ -1,9 +1,9 @@
 /* ===========================================================
-   摄影站 — 前端逻辑（固定暗色，无主题切换）
+   个人站 — 前端逻辑（固定暗色，无主题切换）
    单一数据源：data/works.json
    路由：#/           全部
          #/c/<key>   分类
-         #/work/<id> 作品详情（覆盖层）
+         #/work/<id> 详情（覆盖层）
    =========================================================== */
 (function () {
   'use strict';
@@ -52,7 +52,7 @@
     authors: [],
     filtered: [],
     currentCat: 'all',
-    viewing: null,     // 当前作品
+    viewing: null,     // 当前查看的条目
     imgIndex: 0,
     ready: false
   };
@@ -95,9 +95,9 @@
     return Promise.all([getJSON(DATA_URL), profile])
       .then(function (res) { init(res[0], res[1] || {}); })
       .catch(function (e) {
-        console.error('[site] 作品数据加载失败：', e);
+        console.error('[site] 内容加载失败：', e);
         el.gallery.innerHTML =
-          '<p class="empty">作品数据加载失败（' + esc(e.message) + '）。</p>';
+          '<p class="empty">内容加载失败（' + esc(e.message) + '）。</p>';
         el.gallery.style.display = 'block';
       });
   }
@@ -125,7 +125,7 @@
   function init(data, profile) {
     state.site = data.site || {};
     state.profile = profile || {};
-    // hidden: true 的作品不对外显示（图仍在仓库里，随时可恢复）
+    // hidden: true 的条目不对外显示（图仍在仓库里，随时可恢复）
     state.works = (data.works || []).filter(function (w) {
       return w && !w.hidden;
     });
@@ -183,7 +183,7 @@
     var p = state.profile || {};
     var latest = latestWork();
 
-    // 背景：最新一组作品的封面原图
+    // 背景：最新一条的封面原图
     if (latest) {
       var im = latest.images[0];
       el.heroImg.alt = '';
@@ -196,7 +196,7 @@
       }
     }
 
-    var name = p.name || state.site.title || '翎溯';
+    var name = p.name || state.site.title || 'Reeve';
     el.heroName.textContent = name;
     // 小标题/副标题同样可留空：为空就不渲染，不再兜底 'Photography'
     el.heroEyebrow.textContent = p.role || '';
@@ -205,14 +205,14 @@
     el.heroBio.textContent = p.bio || '';
     el.heroBio.hidden = !el.heroBio.textContent;
 
-    // 统计：组数 / 系列 / 年份跨度
+    // 统计：条数 / 分类数 / 年份跨度
     var years = [];
     state.works.forEach(function (w) {
       var y = w.year || (w.date || '').slice(0, 4);
       if (y && years.indexOf(y) < 0) years.push(y);
     });
     years.sort();
-    var meta = [state.works.length + ' 组作品', state.categories.length + ' 个系列'];
+    var meta = [state.works.length + ' 条', state.categories.length + ' 个分类'];
     if (years.length) {
       meta.push(years[0] + (years.length > 1 ? '—' + years[years.length - 1] : ''));
     }
@@ -235,7 +235,7 @@
     }
 
     renderConnect(p);
-    if (latest) document.title = name + ' — 摄影';
+    if (latest) document.title = name;
   }
 
   function renderConnect(p) {
@@ -301,12 +301,12 @@
     markNav();
 
     if (state.currentCat === 'all') {
-      el.sectionTitle.textContent = '全部作品';
+      el.sectionTitle.textContent = '全部';
     } else {
       el.sectionTitle.innerHTML = esc(catName(state.currentCat)) +
         '<span class="count">' + list.length + ' 件</span>';
     }
-    el.galleryCount.textContent = list.length + ' 组 · 按时间倒序';
+    el.galleryCount.textContent = list.length + ' 条 · 按时间倒序';
 
     el.gallery.innerHTML = '';
     el.empty.hidden = list.length > 0;
@@ -326,7 +326,7 @@
     a.className = 'card';
     a.href = '#/work/' + encodeURIComponent(w.id);
     a.setAttribute('data-id', w.id);
-    a.setAttribute('aria-label', w.title || '作品');
+    a.setAttribute('aria-label', w.title || '打开');
 
     var media = document.createElement('div');
     media.className = 'card-media';

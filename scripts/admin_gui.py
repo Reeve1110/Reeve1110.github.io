@@ -1,4 +1,4 @@
-"""摄影站 · 桌面管理工具
+"""个人站 · 桌面管理工具
 
 做四件事：
   1) 账号：添加 / 登录 / 启用停用（对应 data/accounts.json 与独立 profile）
@@ -184,7 +184,7 @@ class App(tk.Tk):
 
         head = ttk.Frame(left_col, padding=(18, 14, 18, 6))
         head.pack(fill="x")
-        self.head_title = ttk.Label(head, text=f"{self.author_name()} 摄影站",
+        self.head_title = ttk.Label(head, text=f"{self.author_name()} 的个人站",
                                     style="Title.TLabel")
         self.head_title.pack(side="left")
         ttk.Label(head, text="  管理工具", style="Soft.TLabel").pack(side="left")
@@ -303,7 +303,7 @@ class App(tk.Tk):
         self.var_role = tk.StringVar()
         ttk.Entry(box, textvariable=self.var_role, width=30).grid(
             row=3, column=0, sticky="w")
-        ttk.Label(box, text="显示在名字上方；留空则不显示（例如 Photography · 摄影）",
+        ttk.Label(box, text="显示在名字上方；留空则不显示（例如 Life · 今天）",
                   style="Soft.TLabel").grid(
             row=3, column=1, sticky="w", padx=(12, 0))
 
@@ -355,7 +355,7 @@ class App(tk.Tk):
     def save_profile(self):
         bio = self.txt_bio.get("1.0", "end").rstrip()
         data = dict(self.profile_data or {})
-        data["name"] = self.var_name.get().strip() or "翎溯"
+        data["name"] = self.var_name.get().strip() or "Reeve"
         data["role"] = self.var_role.get().strip()
         data["bio"] = bio
         data["bio_source"] = self.var_src.get()
@@ -363,7 +363,7 @@ class App(tk.Tk):
             save_json(PROFILE_JSON, data)
             self.profile_data = data
             # 名字是全站唯一作者名，改完同步到标题栏与账号表
-            self.head_title.configure(text=f"{self.author_name()} 摄影站")
+            self.head_title.configure(text=f"{self.author_name()} 的个人站")
             self.title(f"{self.author_name()} · 管理工具")
             self.unify_account_names()
             self.reload_accounts()
